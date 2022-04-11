@@ -1,0 +1,28 @@
+{
+  "name": "priora",
+  "author": "zawodskoj",
+  "license": "MIT",
+  "version": "1.0.3",
+  "description": "Sugar-free json re-parser",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "publishConfig": {
+    "directory": "dist"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "prepublish": "rm -rf dist && tsc"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "tslib": "^2.3.1",
+    "typescript": "^4.6.3"
+  }
+}
