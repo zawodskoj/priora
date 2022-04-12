@@ -17,8 +17,8 @@
     "node": ">=10"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
-    "prepublish": "rm -rf dist && tsc"
+    "build": "rm -rf dist && yarn jest && tsc",
+    "prepublish": "yarn build"
   },
   "keywords": [],
   "devDependencies": {

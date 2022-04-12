@@ -3,9 +3,9 @@ import {Codec} from "./codec";
 
 export {};
 
-function primitiveCodec(name: string, codec: Codec<any>, goodValues: unknown[], badValues: unknown[], excep: string) {
-    describe(name + " codec", () => {
-        test(`decodes ${name} values successfully`, () => {
+function primitiveCodec(codec: Codec<any>, goodValues: unknown[], badValues: unknown[]) {
+    describe(codec.name + " codec", () => {
+        test(`decodes ${codec.name} values successfully`, () => {
             for (const gv of goodValues)
                 expect(codec.decodeStrict(gv)).toBe(gv);
         })
@@ -13,26 +13,26 @@ function primitiveCodec(name: string, codec: Codec<any>, goodValues: unknown[], 
             for (const bv of badValues) {
                 expect(() => {
                     codec.decodeStrict(bv);
-                }).toThrow(excep);
+                }).toThrow(`Failed to decode ${codec.name} - type mismatch`);
             }
         });
     });
 }
 
-primitiveCodec("string", C.string,
+primitiveCodec(
+    C.string,
     ["", "123"],
-    [123, { foo: "bar" }, false, new Date()],
-    "Failed to decode string - type mismatch"
+    [123, { foo: "bar" }, false, new Date()]
 );
 
-primitiveCodec("number", C.number,
+primitiveCodec(
+    C.number,
     [0, 123],
-    ["123", { foo: "bar" }, false, new Date()],
-    "Failed to decode number - type mismatch"
+    ["123", { foo: "bar" }, false, new Date()]
 );
 
-primitiveCodec("boolean", C.boolean,
+primitiveCodec(
+    C.boolean,
     [true, false],
-    [0, 123, "123", { foo: "bar" }, new Date()],
-    "Failed to decode boolean - type mismatch"
+    [0, 123, "123", { foo: "bar" }, new Date()]
 );
