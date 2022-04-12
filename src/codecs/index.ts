@@ -1,4 +1,4 @@
-import {Codec, identity, UnwrapCodec} from "../codec";
+import {Codec, identity} from "../codec";
 import {ObjectCodecImpl} from "./objectCodec";
 import {CasesCodecImpl} from "./casesCodec";
 import {ArrayCodecImpl} from "./arrayCodec";
@@ -74,12 +74,16 @@ export namespace Codecs {
         )
     }
 
-    export type ObjectSchema<T = any> = ObjectCodecImpl.ObjectSchema<T>;
-    export function object<T extends ObjectSchema>(typename: string, schema: T): Codec<ObjectCodecImpl.UnwrapSchema<T>> {
+    export function objectSchema<T>(schema: ObjectSchema<T>): ObjectSchema<T> {
+        return schema;
+    }
+
+    export type ObjectSchema<T> = ObjectCodecImpl.ObjectSchema<T>;
+    export function object<T>(typename: string, schema: ObjectSchema<T>): Codec<T> {
         return ObjectCodecImpl.create(typename, schema);
     }
 
-    export function partial<T extends ObjectSchema>(typename: string, schema: T): Codec<Partial<ObjectCodecImpl.UnwrapSchema<T>>> {
+    export function partial<T>(typename: string, schema: ObjectSchema<T>): Codec<Partial<T>> {
         return ObjectCodecImpl.createPartial(typename, schema);
     }
 
@@ -88,7 +92,7 @@ export namespace Codecs {
         return CasesCodecImpl.create<T, D>(typename, discriminator, schema);
     }
 
-    export function array<T extends Codec<any>>(codec: T): Codec<UnwrapCodec<T>[]> {
+    export function array<T>(codec: Codec<T>): Codec<T[]> {
         return ArrayCodecImpl.create<T>(codec.name + "[]", codec);
     }
 
