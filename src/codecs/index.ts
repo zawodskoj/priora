@@ -74,16 +74,18 @@ export namespace Codecs {
         )
     }
 
+    export type ObjectSchema<T> = ObjectCodecImpl.ObjectSchema<T>;
     export function objectSchema<T>(schema: ObjectSchema<T>): ObjectSchema<T> {
         return schema;
     }
 
-    export type ObjectSchema<T> = ObjectCodecImpl.ObjectSchema<T>;
-    export function object<T>(typename: string, schema: ObjectSchema<T>): Codec<T> {
+    export type ObjectCodec<T extends object> = ObjectCodecImpl.ObjectCodec<T>;
+    export function object<T extends object>(typename: string, schema: ObjectSchema<T>): ObjectCodec<T> {
         return ObjectCodecImpl.create(typename, schema);
     }
 
-    export function partial<T>(typename: string, schema: ObjectSchema<T>): Codec<Partial<T>> {
+    export type PartialObjectCodec<T extends object> = ObjectCodecImpl.PartialObjectCodec<T>;
+    export function partial<T extends object>(typename: string, schema: ObjectSchema<T>): PartialObjectCodec<T> {
         return ObjectCodecImpl.createPartial(typename, schema);
     }
 
