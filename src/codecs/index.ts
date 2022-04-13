@@ -43,7 +43,7 @@ export namespace Codecs {
     export const $true = singleton(true);
     export const $false = singleton(false);
 
-    export function literals<Ts extends [string, ...string[]]>(name: string, ts: Ts): Codec<Ts[number]> {
+    export function literals<L extends string, Ts extends [L, ...L[]]>(name: string, ts: Ts): Codec<Ts[number]> {
         return Codec.make<Ts[number]>(
             name,
             (val, ctx) => {
@@ -60,7 +60,7 @@ export namespace Codecs {
     }
 
     export const stringKey = KeyCodec.make<string>("string", identity, identity);
-    export function literalKeys<Ts extends [string, ...string[]]>(name: string, ts: Ts): KeyCodec<Ts[number]> {
+    export function literalKeys<L extends string, Ts extends [L, ...L[]]>(name: string, ts: Ts): KeyCodec<Ts[number]> {
         return KeyCodec.make<Ts[number]>(
             name,
             (val, ctx) => {
