@@ -62,7 +62,12 @@ export abstract class Codec<T> {
         return new CodecProjection(rename ?? this.name, this, decode, identity);
     }
 
-    get optional(): Codec<T | undefined | null> {
+    get optional(): Codec<T | undefined> {
+        return new OptionalCodec(this.name + " | nothing", this, undefined, null)
+            .imap(x => x ?? undefined, x => x, undefined);
+    }
+
+    get optionalStrict(): Codec<T | undefined | null> {
         return new OptionalCodec(this.name + " | undefined | null", this, undefined, null);
     }
 
