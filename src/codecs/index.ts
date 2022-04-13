@@ -7,6 +7,9 @@ import {RecordCodecImpl} from "./recordCodec";
 import {KeyCodec} from "../keyCodec";
 
 export namespace Codecs {
+    import CasesCodec = CasesCodecImpl.CasesCodec;
+    import TupleCodecs = ArrayCodecImpl.TupleCodecs;
+
     interface PrimitiveHelperMap {
         number: number
         string: string
@@ -90,12 +93,17 @@ export namespace Codecs {
     }
 
     export type CasesSchema = CasesCodecImpl.ObjectSchema;
-    export function cases<T extends CasesSchema, D extends string>(typename: string, discriminator: D, schema: T): Codec<CasesCodecImpl.UnwrapSchema<T, D>> {
+    export type PickCase<C extends CasesCodec<any, any>, K extends string> = CasesCodecImpl.PickCase<C, K>;
+    export function cases<T extends CasesSchema, D extends string>(typename: string, discriminator: D, schema: T): CasesCodec<T, D> {
         return CasesCodecImpl.create<T, D>(typename, discriminator, schema);
     }
 
     export function array<T>(codec: Codec<T>): Codec<T[]> {
         return ArrayCodecImpl.create<T>(codec.name + "[]", codec);
+    }
+
+    export function tuple<T extends [any, ...any[]]>(codecs: TupleCodecs<T>): Codec<T> {
+        return ArrayCodecImpl.createTuple<T>(`[${codecs.map(x => x.name).join(", ")}]`, codecs);
     }
 
     export function recursive<T extends object>(typename: string) {

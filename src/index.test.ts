@@ -1,5 +1,6 @@
-import {Codecs as C} from "./codecs";
-import {Codec} from "./codec";
+import {Codecs, Codecs as C} from "./codecs";
+import {Codec, UnwrapCodec} from "./codec";
+import PickCase = Codecs.PickCase;
 
 export {};
 
@@ -36,3 +37,47 @@ primitiveCodec(
     [true, false],
     [0, 123, "123", { foo: "bar" }, new Date()]
 );
+
+/*
+
+test("kek", () => {
+    const cases = C.cases("cases", "type", {
+        foo: { foo: C.string },
+        bar: { bar: C.number },
+        qux: { qux: C.boolean },
+    })
+
+    type Cases = UnwrapCodec<typeof cases>;
+    type CasesK = "foo" | "bar" | "qux";
+    type CasesOG<T extends CasesK = CasesK> = Cases & { type: T };
+    type CasesG<T extends CasesK = CasesK> = PickCase<typeof cases, T>;
+
+    function a(c: Cases) {
+        if (c.type === "bar") {
+            void c.bar
+        }
+    }
+
+    function b(c: CasesOG) {
+        if (c.type === "bar") {
+            void c.bar
+        }
+    }
+
+    function c(c: CasesG) {
+        if (c.type === "bar") {
+            void c.bar
+        }
+    }
+
+    function d<T extends "bar">(t: T, c: CasesG): CasesG<T> {
+        if (c.type === "bar") {
+            if (t === "bar") {
+                return c;
+            }
+        }
+    }
+
+    d<never>("" as never, null as unknown as CasesG);
+})
+*/

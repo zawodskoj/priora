@@ -8,47 +8,60 @@ export namespace CasesCodecImpl {
         [key in keyof T]: ObjectCodecImpl.UnwrapSchema<T[key]> & { [_ in D]: key }
     }[keyof T];
 
-    export function create<T extends ObjectSchema, D extends string>(typename: string, discriminator: D, schema: T): Codec<UnwrapSchema<T, D>> {
-        type Result = UnwrapSchema<T, D>;
+    export type PickCase<C extends CasesCodec<any, any>, K extends string> =
+        C extends CasesCodec<infer T, infer D> ? {
+            [key in K]: ObjectCodecImpl.UnwrapSchema<T[key]> & { [_ in D]: key };
+        }[K] : never;
 
-        const cases = (Object.entries(schema) as [keyof T, ObjectCodecImpl.ObjectSchema][])
-            .map(([c, s]) => [c, Object.entries(s) as [keyof T[typeof c] & string, Codec<any>][]] as const);
+    export class CasesCodec<T extends ObjectSchema, D extends string> extends Codec<UnwrapSchema<T, D>> {
+        private cases: [string, [string, Codec<any>][]][]
 
-        // imma lazy to make typelevel assertion
-        for (const [,caseProperties] of cases) {
-            for (const [property,] of caseProperties) {
-                if (property === discriminator)
-                    throw new Error(); // TODO error message
+        constructor(
+            readonly name: string,
+            readonly schema: T,
+            readonly discriminator: D
+        ) {
+            super();
+
+            this.cases = (Object.entries(this.schema) as [string, ObjectCodecImpl.ObjectSchema][])
+                .map(([c, s]) => [c, Object.entries(s) as [string, Codec<any>][]]);
+
+            // imma lazy to make typelevel assertion
+            for (const [,caseProperties] of this.cases) {
+                for (const [property,] of caseProperties) {
+                    if (property === discriminator)
+                        throw new Error(); // TODO error message
+                }
             }
         }
 
-        function decode(val: unknown, ctx: DecodingContext): Result {
+        decode(val: unknown, ctx: DecodingContext): UnwrapSchema<T, D> {
             if (typeof val !== "object") return ctx.failure("Failed to decode cases - object expected", val);
 
-            const coercedVal = val as Record<keyof Result, unknown>;
+            const coercedVal = val as Record<string, unknown>;
 
-            if (!coercedVal[discriminator]) {
+            if (!coercedVal[this.discriminator]) {
                 return ctx.failure("Failed to decode cases - object with discriminator expected", val);
             }
 
-            for (const [caseTag, caseProperties] of cases) {
-                if (coercedVal[discriminator] === caseTag) {
+            for (const [caseTag, caseProperties] of this.cases) {
+                if (coercedVal[this.discriminator] === caseTag) {
                     try {
-                        ctx.unsafeEnter(typename + "#" + caseTag, undefined);
+                        ctx.unsafeEnter(this.name + "#" + caseTag, undefined);
                         const target = {
-                            [discriminator]: caseTag
-                        } as Result;
+                            [this.discriminator]: caseTag
+                        };
 
                         for (const [propertyName, propertyCodec] of caseProperties) {
-                            ctx.unsafeEnter(typename + "#" + caseTag + "." + propertyName, propertyName);
+                            ctx.unsafeEnter(this.name + "#" + caseTag + "." + propertyName, propertyName);
                             try {
-                                target[propertyName] = propertyCodec.decode(coercedVal[propertyName], ctx) as Result[typeof propertyName];
+                                target[propertyName] = propertyCodec.decode(coercedVal[propertyName], ctx) as UnwrapSchema<T, D>[typeof propertyName];
                             } finally {
                                 ctx.unsafeLeave();
                             }
                         }
 
-                        return target;
+                        return target as UnwrapSchema<T, D>;
                     } finally {
                         ctx.unsafeLeave();
                     }
@@ -58,12 +71,12 @@ export namespace CasesCodecImpl {
             return ctx.failure("Failed to decode cases - none matched", val);
         }
 
-        function encode(val: Result): unknown {
+        encode(val: UnwrapSchema<T, D>): unknown {
             const target = {
-                [discriminator]: val[discriminator]
-            } as Record<keyof Result, unknown>;
+                [this.discriminator]: val[this.discriminator]
+            } as Record<string, unknown>;
 
-            const $case = cases.find(x => x[0] === val[discriminator]);
+            const $case = this.cases.find(x => x[0] === val[this.discriminator]);
             if (!$case) throw new Error(); // TODO error message
 
             for (const [propertyName, propertyCodec] of $case[1]) {
@@ -72,7 +85,9 @@ export namespace CasesCodecImpl {
 
             return target;
         }
+    }
 
-        return Codec.make(typename, decode, encode);
+    export function create<T extends ObjectSchema, D extends string>(typename: string, discriminator: D, schema: T): CasesCodec<T, D> {
+        return new CasesCodec(typename, schema, discriminator);
     }
 }
