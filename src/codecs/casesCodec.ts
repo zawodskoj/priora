@@ -67,7 +67,7 @@ export class ClosedCasesCodec<
     }
 
     $decode(val: unknown, ctx: DecodingContext): CasesCodecResult<D, B, S, H> {
-        if (typeof val !== "object") return ctx.failure("Failed to decode cases - object expected", val);
+        if (typeof val !== "object" || typeof val === null) return ctx.failure("Failed to decode cases - object expected", val);
 
         const coercedVal = val as Record<string, unknown>;
 

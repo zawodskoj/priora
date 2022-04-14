@@ -119,7 +119,7 @@ export namespace Codecs {
     export function partialRecord<T>(codec: Codec<T>): Codec<Partial<Record<string, T>>>
     export function partialRecord<T, L extends string>(codec: Codec<T>, keyCodec: KeyCodec<L>): Codec<Partial<Record<L, T>>>
     export function partialRecord<T, L extends string>(codec: Codec<T>, keyCodec?: KeyCodec<L>): Codec<Partial<Record<L, T>>> {
-        return RecordCodecImpl.create(codec, keyCodec, true);
+        return RecordCodecImpl.create(codec, keyCodec, true) as never; // TODO: better types
     }
 
     export function map<T>(codec: Codec<T>): Codec<Map<string, T>>

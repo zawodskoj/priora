@@ -14,7 +14,7 @@ export abstract class Codec<T> {
     abstract $decode(value: unknown, ctx: DecodingContext): T
     abstract $encode(value: T): unknown
 
-    encode: (value: T) => unknown = v => { return this.encode(v); }
+    encode: (value: T) => unknown = v => { return this.$encode(v); }
 
     private decodeInFreshContext(value: unknown, flags: DecodingFlags): T {
         const runCtx = new DecodingContext(flags);

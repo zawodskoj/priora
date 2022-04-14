@@ -7,7 +7,7 @@ export namespace RecordCodecImpl {
         const typename = `record<${ keyCodec?.name ?? "string" }, ${ codec.name }>`;
 
         function decode(val: unknown, ctx: DecodingContext): Record<L, T> {
-            if (typeof val !== "object")
+            if (typeof val !== "object" || typeof val === null)
                 return ctx.failure("Failed to decode object - object expected", val);
 
             const target = {} as Record<L, T>;
@@ -49,7 +49,7 @@ export namespace RecordCodecImpl {
         const typename = `record<${ keyCodec?.name ?? "string" }, ${ codec.name }>`;
 
         function decode(val: unknown, ctx: DecodingContext): Map<L, T> {
-            if (typeof val !== "object")
+            if (typeof val !== "object" || typeof val === null)
                 return ctx.failure("Failed to decode object - object expected", val);
 
             const target = new Map<L, T>();
