@@ -43,7 +43,10 @@ export namespace ArrayCodecImpl {
     export function createTuple<T extends [any, ...any[]]>(typename: string, codecs: TupleCodecs<T>): Codec<T> {
         function decode(val: unknown, ctx: DecodingContext): T {
             if (!Array.isArray(val))
-                return ctx.failure("Failed to decode array - array expected", val);
+                return ctx.failure("Failed to decode tuple - array expected", val);
+
+            if (val.length !== codecs.length)
+                return ctx.failure("Failed to decode tuple - wrong element count", val);
 
             const coercedArray = val as unknown[];
             const target = [] as unknown as T;
