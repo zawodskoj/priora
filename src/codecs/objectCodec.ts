@@ -10,8 +10,8 @@ export namespace ObjectCodecImpl {
             readonly name: string,
             readonly schema: ObjectSchema<T>,
             private readonly properties: [keyof T & string, Codec<unknown>][],
-            private readonly partial: boolean,
-            private readonly suppressContext: boolean
+            private readonly isPartial: boolean,
+            protected readonly suppressContext: boolean
         ) {
             super()
         }
@@ -24,7 +24,7 @@ export namespace ObjectCodecImpl {
             const target = { } as T;
 
             for (const [propertyName, propertyCodec] of this.properties) {
-                if (!this.partial || coercedVal[propertyName] !== undefined) {
+                if (!this.isPartial || coercedVal[propertyName] !== undefined) {
                     if (this.suppressContext) {
                         target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as T[typeof propertyName];
                     } else {
@@ -45,7 +45,7 @@ export namespace ObjectCodecImpl {
             const target = { } as Record<keyof T, unknown>;
 
             for (const [propertyName, propertyCodec] of this.properties) {
-                if (!this.partial || val[propertyName] !== undefined) {
+                if (!this.isPartial || val[propertyName] !== undefined) {
                     target[propertyName] = propertyCodec.$encode(val[propertyName]);
                 }
             }
@@ -68,6 +68,10 @@ export namespace ObjectCodecImpl {
                 suppressContext
             );
         }
+
+        get partial(): PartialObjectCodec<T> {
+            return new PartialObjectCodec(this.name, this.schema, this.suppressContext);
+        }
     }
 
     export class PartialObjectCodec<T extends object> extends Impl<T, Partial<T>> {
@@ -88,9 +92,5 @@ export namespace ObjectCodecImpl {
 
     export function create<T extends object>(typename: string, schema: ObjectSchema<T>, suppressContext: boolean = false): ObjectCodec<T> {
         return new ObjectCodec<T>(typename, schema, suppressContext);
-    }
-
-    export function createPartial<T extends object>(typename: string, schema: ObjectSchema<T>, suppressContext: boolean = false): PartialObjectCodec<T> {
-        return new PartialObjectCodec<T>(typename, schema, suppressContext);
     }
 }

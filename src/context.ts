@@ -1,16 +1,13 @@
 import {DecodingException} from "./errors";
-
-export type WarnMode = "batch" | "on-the-go" | "suppress";
+import {Codec} from "./codec";
 
 export interface DecodingFlags {
     readonly bestEffort: boolean
-    readonly warnMode: WarnMode
 }
 
 export class DecodingContext {
     scope: string[] = []
     path: (string|number|undefined)[] = ["#"]
-    warnings: DecodingException[] = []
 
     constructor(
         readonly flags: DecodingFlags
@@ -27,25 +24,19 @@ export class DecodingContext {
     }
 
     failure<T>(message: string, garbage: unknown): T {
-        if (this.flags.bestEffort) {
-            switch (this.flags.warnMode) {
-                case "batch": {
-                    const dex = new DecodingException(message, [...this.scope].reverse(), [...this.path], garbage);
-                    this.warnings.push(dex);
-                    break;
-                }
-                case "on-the-go": {
-                    const dex = new DecodingException(message, [...this.scope].reverse(), [...this.path], garbage);
-                    dex.print(true);
-                    break;
-                }
-                case "suppress": break;
-            }
+        const logCfg = Codec.loggingConfiguration;
 
-            return garbage as T;
+        if (logCfg.enabled && (logCfg.always || this.flags.bestEffort)) {
+            logCfg.logError(
+                DecodingException.formatError(message, this.scope, this.path),
+                garbage
+            )
         }
 
-        throw new DecodingException(message, [...this.scope].reverse(), [...this.path], garbage);
+        if (this.flags.bestEffort)
+            return garbage as T;
+
+        throw new DecodingException(message, this.scope, this.path, garbage);
     }
 
     enclose<T>(scopeName: string, path: string | number | undefined, fn: () => T): T {

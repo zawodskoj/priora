@@ -86,9 +86,8 @@ export namespace Codecs {
         return ObjectCodecImpl.create(typename, schema);
     }
 
-    export type PartialObjectCodec<T extends object> = ObjectCodecImpl.PartialObjectCodec<T>;
-    export function partial<T extends object>(typename: string, schema: ObjectSchema<T>): PartialObjectCodec<T> {
-        return ObjectCodecImpl.createPartial(typename, schema);
+    export function inline<T extends object>(schema: ObjectSchema<T>): ObjectCodec<T> {
+        return ObjectCodecImpl.create("<inline type>", schema);
     }
 
     export type PickCase<C, K extends string> = PickCase_<C, K>;
@@ -114,12 +113,6 @@ export namespace Codecs {
     export function record<T, L extends string>(codec: Codec<T>, keyCodec: KeyCodec<L>): Codec<Record<L, T>>
     export function record<T, L extends string>(codec: Codec<T>, keyCodec?: KeyCodec<L>): Codec<Record<L, T>> {
         return RecordCodecImpl.create(codec, keyCodec, false);
-    }
-
-    export function partialRecord<T>(codec: Codec<T>): Codec<Partial<Record<string, T>>>
-    export function partialRecord<T, L extends string>(codec: Codec<T>, keyCodec: KeyCodec<L>): Codec<Partial<Record<L, T>>>
-    export function partialRecord<T, L extends string>(codec: Codec<T>, keyCodec?: KeyCodec<L>): Codec<Partial<Record<L, T>>> {
-        return RecordCodecImpl.create(codec, keyCodec, true) as never; // TODO: better types
     }
 
     export function map<T>(codec: Codec<T>): Codec<Map<string, T>>

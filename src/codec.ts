@@ -1,13 +1,23 @@
-import {DecodingContext, DecodingFlags, WarnMode} from "./context";
+import {DecodingContext, DecodingFlags} from "./context";
 import {DecodingException, Result} from "./errors";
 
 export function identity<T>(x: T): T { return x; }
 
 export type UnwrapCodec<T extends Codec<any>> = T extends Codec<infer C> ? C : never;
 
+export interface LoggingConfiguration {
+    enabled: boolean
+    always: boolean
+    logError(message: string, garbage: unknown): void
+}
+
 export abstract class Codec<T> {
-    static defaultWarnMode: WarnMode = "on-the-go";
     static defaultStrictMode: boolean = true;
+    static loggingConfiguration: LoggingConfiguration = {
+        logError(message, garbage) { /* no output by default */ },
+        always: false,
+        enabled: true
+    };
 
     abstract name: string
 
@@ -19,24 +29,16 @@ export abstract class Codec<T> {
     private decodeInFreshContext(value: unknown, flags: DecodingFlags): T {
         const runCtx = new DecodingContext(flags);
 
-        if (runCtx.warnings.length) {
-            console.warn("Some decoding errors occurred:");
-
-            for (const warn of runCtx.warnings) {
-                warn.print(true);
-            }
-        }
-
         return this.$decode(value, runCtx);
     }
 
     decodeStrict: (value: unknown) => T = value => {
-        return this.decodeInFreshContext(value, { warnMode: Codec.defaultWarnMode, bestEffort: false });
+        return this.decodeInFreshContext(value, { bestEffort: false });
     };
 
     tryDecodeStrict = (value: unknown): Result<T> => {
         try {
-            return { T: "ok", value: this.decodeInFreshContext(value, { warnMode: Codec.defaultWarnMode, bestEffort: false }) };
+            return { T: "ok", value: this.decodeInFreshContext(value, { bestEffort: false }) };
         } catch (e) {
             if (e instanceof DecodingException) {
                 return {T: "error", exception: e};
@@ -47,12 +49,10 @@ export abstract class Codec<T> {
     };
 
     decodeLax = (value: unknown): T => this.decodeInFreshContext(value, {
-        warnMode: Codec.defaultWarnMode,
         bestEffort: true
     });
 
     decodeWithDefaults = (value: unknown): T => this.decodeInFreshContext(value, {
-        warnMode: Codec.defaultWarnMode,
         bestEffort: !Codec.defaultStrictMode
     });
 

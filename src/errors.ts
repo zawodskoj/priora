@@ -1,26 +1,30 @@
 export class DecodingException {
-    constructor(
-        readonly message: string,
-        readonly scope: string[],
-        readonly path: (string|number|undefined)[],
-        readonly garbage: unknown
-    ) {}
+    static formatError(
+        message: string,
+        scope: string[],
+        path: (string|number|undefined)[]
+    ) {
+        const pathStr = path.filter(x => x !== undefined).map(x => typeof x === "string" ? x : `[${x}]`).join(".")
+        const traceStr = scope.map(x => "\n\tat " + x).reverse().join("");
 
-    toString() {
-        const path = this.path.filter(x => x !== undefined).map(x => typeof x === "string" ? x : `[${x}]`).join(".")
-        const trace = this.scope.map(x => "\n\tat " + x).join("");
-
-        return `${this.message}\nValue path: ${path}\nScope trace:${trace}`;
+        return `${message}\nValue path: ${pathStr}\nScope trace:${traceStr}`;
     }
 
-    print(warn: boolean = false) {
-        if (warn) {
-            console.warn(this.toString());
-            console.warn("Garbage value:", this.garbage);
-        } else {
-            console.error(this.toString());
-            console.error("Garbage value:", this.garbage);
-        }
+    readonly scope: string[]
+    readonly path: (string|number|undefined)[]
+
+    constructor(
+        readonly message: string,
+        scope: string[],
+        path: (string|number|undefined)[],
+        readonly garbage: unknown
+    ) {
+        this.scope = [...scope];
+        this.path = [...path];
+    }
+
+    toString() {
+        return DecodingException.formatError(this.message, this.scope, this.path)
     }
 }
 

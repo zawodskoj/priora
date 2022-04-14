@@ -1,5 +1,5 @@
 import {CasesCodec} from "./casesCodec";
-import {Codec} from "../codec";
+import {Codec, UnwrapCodec} from "../codec";
 import {Codecs} from "./index";
 
 describe("CasesCodec2 tests", function () {
@@ -127,5 +127,24 @@ describe("CasesCodec2 tests", function () {
 
         // missing base fields
         expect(() => codec.decodeStrict({ type: "foo", bar: "123" })).toThrow();
+    })
+
+    test("Partial cases typecheck", () => {
+        const casesCodec = CasesCodec.make<"foo" | "bar">("codec")
+            .withDiscriminator("type")
+            .base({ base: Codecs.number })
+            .single("foo", { bar: Codecs.string })
+            .empty("bar")
+            .close();
+
+        const casesV: UnwrapCodec<typeof casesCodec> = {
+            type: "foo",
+            bar: "123",
+            base: 123
+        }
+
+        const casesP: Partial<UnwrapCodec<typeof casesCodec>> = {
+            base: 123
+        };
     })
 });
