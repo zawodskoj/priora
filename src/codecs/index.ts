@@ -1,13 +1,12 @@
 import {Codec, identity} from "../codec";
 import {ObjectCodecImpl} from "./objectCodec";
-import {CasesCodecImpl} from "./casesCodec";
+import {CasesCodec, PickCase as PickCase_} from "./casesCodec";
 import {ArrayCodecImpl} from "./arrayCodec";
 import {RecursiveCodecImpl} from "./recursiveCodec";
 import {RecordCodecImpl} from "./recordCodec";
 import {KeyCodec} from "../keyCodec";
 
 export namespace Codecs {
-    import CasesCodec = CasesCodecImpl.CasesCodec;
     import TupleCodecs = ArrayCodecImpl.TupleCodecs;
 
     interface PrimitiveHelperMap {
@@ -92,10 +91,9 @@ export namespace Codecs {
         return ObjectCodecImpl.createPartial(typename, schema);
     }
 
-    export type CasesSchema = CasesCodecImpl.ObjectSchema;
-    export type PickCase<C extends CasesCodec<any, any>, K extends string> = CasesCodecImpl.PickCase<C, K>;
-    export function cases<T extends CasesSchema, D extends string>(typename: string, discriminator: D, schema: T): CasesCodec<T, D> {
-        return CasesCodecImpl.create<T, D>(typename, discriminator, schema);
+    export type PickCase<C, K extends string> = PickCase_<C, K>;
+    export function cases<H extends string>(typename: string) {
+        return CasesCodec.make<H>(typename);
     }
 
     export function array<T>(codec: Codec<T>): Codec<T[]> {
