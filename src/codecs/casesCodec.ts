@@ -66,7 +66,7 @@ export class ClosedCasesCodec<
         )
     }
 
-    decode(val: unknown, ctx: DecodingContext): CasesCodecResult<D, B, S, H> {
+    $decode(val: unknown, ctx: DecodingContext): CasesCodecResult<D, B, S, H> {
         if (typeof val !== "object") return ctx.failure("Failed to decode cases - object expected", val);
 
         const coercedVal = val as Record<string, unknown>;
@@ -94,7 +94,7 @@ export class ClosedCasesCodec<
             for (const [propertyName, propertyCodec] of caseProperties) {
                 ctx.unsafeEnter(this.name + "#" + discriminator + "." + propertyName, propertyName);
                 try {
-                    target[propertyName] = propertyCodec.decode(coercedVal[propertyName], ctx) as never;
+                    target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as never;
                 } finally {
                     ctx.unsafeLeave();
                 }
@@ -106,7 +106,7 @@ export class ClosedCasesCodec<
         }
     }
 
-    encode(val: CasesCodecResult<D, B, S, H>): unknown {
+    $encode(val: CasesCodecResult<D, B, S, H>): unknown {
         const caseProperties = this.casesMap[val[this.discriminator]];
         if (!caseProperties) throw new Error(); // TODO error message
 
@@ -115,7 +115,7 @@ export class ClosedCasesCodec<
         } as Record<string, unknown>;
 
         for (const [propertyName, propertyCodec] of caseProperties) {
-            target[propertyName] = propertyCodec.encode(val[propertyName as never]);
+            target[propertyName] = propertyCodec.$encode(val[propertyName as never]);
         }
 
         return target;

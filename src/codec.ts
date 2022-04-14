@@ -11,8 +11,10 @@ export abstract class Codec<T> {
 
     abstract name: string
 
-    abstract decode(value: unknown, ctx: DecodingContext): T
-    abstract encode(value: T): unknown
+    abstract $decode(value: unknown, ctx: DecodingContext): T
+    abstract $encode(value: T): unknown
+
+    encode: (value: T) => unknown = v => { return this.encode(v); }
 
     private decodeInFreshContext(value: unknown, flags: DecodingFlags): T {
         const runCtx = new DecodingContext(flags);
@@ -25,7 +27,7 @@ export abstract class Codec<T> {
             }
         }
 
-        return this.decode(value, runCtx);
+        return this.$decode(value, runCtx);
     }
 
     decodeStrict: (value: unknown) => T = value => {
@@ -66,7 +68,7 @@ export abstract class Codec<T> {
 
     get optional(): Codec<T | undefined> {
         return new OptionalCodec(this.name + " | nothing", this, undefined, null)
-            .imap(x => x ?? undefined, x => x, undefined);
+            .imap<T | undefined>(x => x ?? undefined, x => x, undefined);
     }
 
     get optionalStrict(): Codec<T | undefined | null> {
@@ -94,21 +96,21 @@ class OptionalCodec<T, O extends undefined | null> extends Codec<T | O> {
         private readonly o2: O
     ) { super(); }
 
-    decode(value: unknown, ctx: DecodingContext): T | O {
+    $decode(value: unknown, ctx: DecodingContext): T | O {
         ctx.unsafeEnter(this.name, undefined);
         try {
             if (value === this.o1 || value === this.o2) return value as O;
 
-            return this.base.decode(value, ctx);
+            return this.base.$decode(value, ctx);
         } finally {
             ctx.unsafeLeave();
         }
     }
 
-    encode(value: T | O): unknown {
+    $encode(value: T | O): unknown {
         if (value === this.o1 || value === this.o2) return value;
 
-        return this.base.encode(value as T);
+        return this.base.$encode(value as T);
     }
 }
 
@@ -120,7 +122,7 @@ class LambdaCodec<T> extends Codec<T> {
         private readonly suppressContext: boolean
     ) { super(); }
 
-    decode(value: unknown, ctx: DecodingContext): T {
+    $decode(value: unknown, ctx: DecodingContext): T {
         if (this.suppressContext) {
             return this._decode(value, ctx);
         }
@@ -133,7 +135,7 @@ class LambdaCodec<T> extends Codec<T> {
         }
     }
 
-    encode(value: T): unknown {
+    $encode(value: T): unknown {
         return this._encode(value);
     }
 }
@@ -146,16 +148,16 @@ class CodecProjection<T, T2> extends Codec<T2> {
         private readonly encodeToT: (v: T2) => T
     ) { super(); }
 
-    decode(value: unknown, ctx: DecodingContext): T2 {
+    $decode(value: unknown, ctx: DecodingContext): T2 {
         ctx.unsafeEnter(this.name, undefined);
         try {
-            return this.decodeToT2(this.base.decode(value, ctx), ctx);
+            return this.decodeToT2(this.base.$decode(value, ctx), ctx);
         } finally {
             ctx.unsafeLeave();
         }
     }
 
-    encode(value: T2): unknown {
-        return this.base.encode(this.encodeToT(value));
+    $encode(value: T2): unknown {
+        return this.base.$encode(this.encodeToT(value));
     }
 }

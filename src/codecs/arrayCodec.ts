@@ -14,7 +14,7 @@ export namespace ArrayCodecImpl {
                 ctx.unsafeEnter(`${typename}[${i}]`, i);
 
                 try {
-                    target.push(codec.decode(coercedArray[i], ctx));
+                    target.push(codec.$decode(coercedArray[i], ctx));
                 } finally {
                     ctx.unsafeLeave();
                 }
@@ -27,7 +27,7 @@ export namespace ArrayCodecImpl {
             const target = [] as unknown[];
 
             for (const elem of val) {
-                target.push(codec.encode(elem));
+                target.push(codec.$encode(elem));
             }
 
             return target;
@@ -58,7 +58,7 @@ export namespace ArrayCodecImpl {
                 ctx.unsafeEnter(`${typename}[${i}]`, i);
 
                 try {
-                    target.push(codec.decode(elem, ctx));
+                    target.push(codec.$decode(elem, ctx));
                 } finally {
                     ctx.unsafeLeave();
                 }
@@ -74,7 +74,7 @@ export namespace ArrayCodecImpl {
                 const elem = val[i];
                 const codec = codecs[i];
 
-                target.push(codec.encode(elem));
+                target.push(codec.$encode(elem));
             }
 
             return target;

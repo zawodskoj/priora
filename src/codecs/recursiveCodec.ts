@@ -15,11 +15,11 @@ export namespace RecursiveCodecImpl {
         }
 
         function decode(val: unknown, ctx: DecodingContext): T {
-            return getInstance().decode(val, ctx);
+            return getInstance().$decode(val, ctx);
         }
 
         function encode(val: T): unknown {
-            return getInstance().encode(val);
+            return getInstance().$encode(val);
         }
 
         return knot = Codec.make(typename, decode, encode);

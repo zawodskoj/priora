@@ -18,7 +18,7 @@ export namespace RecordCodecImpl {
                     try {
                         const decodedKey = keyCodec?.decode(k, ctx) ?? (k as L);
 
-                        target[decodedKey] = codec.decode(v, ctx);
+                        target[decodedKey] = codec.$decode(v, ctx);
                     } finally {
                         ctx.unsafeLeave();
                     }
@@ -35,7 +35,7 @@ export namespace RecordCodecImpl {
                 if (!partial || v !== undefined) {
                     const encodedKey = keyCodec?.encode(k as L) ?? k;
 
-                    target[encodedKey] = codec.encode(v as T);
+                    target[encodedKey] = codec.$encode(v as T);
                 }
             }
 
@@ -59,7 +59,7 @@ export namespace RecordCodecImpl {
                 try {
                     const decodedKey = keyCodec?.decode(k, ctx) ?? (k as unknown as L);
 
-                    target.set(decodedKey, codec.decode(v, ctx));
+                    target.set(decodedKey, codec.$decode(v, ctx));
                 } finally {
                     ctx.unsafeLeave();
                 }
@@ -74,7 +74,7 @@ export namespace RecordCodecImpl {
             for (const [k, v] of val.entries()) {
                 const encodedKey = keyCodec?.encode(k as L) ?? (k as unknown as string);
 
-                target[encodedKey] = codec.encode(v as T);
+                target[encodedKey] = codec.$encode(v as T);
             }
 
             return target;

@@ -16,7 +16,7 @@ export namespace ObjectCodecImpl {
             super()
         }
 
-        decode(val: unknown, ctx: DecodingContext): P {
+        $decode(val: unknown, ctx: DecodingContext): P {
             if (typeof val !== "object")
                 return ctx.failure("Failed to decode object - object expected", val);
 
@@ -26,11 +26,11 @@ export namespace ObjectCodecImpl {
             for (const [propertyName, propertyCodec] of this.properties) {
                 if (!this.partial || coercedVal[propertyName] !== undefined) {
                     if (this.suppressContext) {
-                        target[propertyName] = propertyCodec.decode(coercedVal[propertyName], ctx) as T[typeof propertyName];
+                        target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as T[typeof propertyName];
                     } else {
                         ctx.unsafeEnter(this.name + "." + propertyName, propertyName);
                         try {
-                            target[propertyName] = propertyCodec.decode(coercedVal[propertyName], ctx) as T[typeof propertyName];
+                            target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as T[typeof propertyName];
                         } finally {
                             ctx.unsafeLeave();
                         }
@@ -41,12 +41,12 @@ export namespace ObjectCodecImpl {
             return target as P;
         }
 
-        encode(val: P): unknown {
+        $encode(val: P): unknown {
             const target = { } as Record<keyof T, unknown>;
 
             for (const [propertyName, propertyCodec] of this.properties) {
                 if (!this.partial || val[propertyName] !== undefined) {
-                    target[propertyName] = propertyCodec.encode(val[propertyName]);
+                    target[propertyName] = propertyCodec.$encode(val[propertyName]);
                 }
             }
 
