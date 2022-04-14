@@ -28,11 +28,11 @@ export abstract class Codec<T> {
         return this.decode(value, runCtx);
     }
 
-    decodeStrict(value: unknown): T {
+    decodeStrict: (value: unknown) => T = value => {
         return this.decodeInFreshContext(value, { warnMode: Codec.defaultWarnMode, bestEffort: false });
-    }
+    };
 
-    tryDecodeStrict(value: unknown): Result<T> {
+    tryDecodeStrict = (value: unknown): Result<T> => {
         try {
             return { T: "ok", value: this.decodeInFreshContext(value, { warnMode: Codec.defaultWarnMode, bestEffort: false }) };
         } catch (e) {
@@ -42,15 +42,17 @@ export abstract class Codec<T> {
                 return {T: "error", exception: new DecodingException("Unknown exception: " + e, [], [],undefined) };
             }
         }
-    }
+    };
 
-    decodeLax(value: unknown): T {
-        return this.decodeInFreshContext(value, { warnMode: Codec.defaultWarnMode, bestEffort: true });
-    }
+    decodeLax = (value: unknown): T => this.decodeInFreshContext(value, {
+        warnMode: Codec.defaultWarnMode,
+        bestEffort: true
+    });
 
-    decodeWithDefaults(value: unknown): T {
-        return this.decodeInFreshContext(value, { warnMode: Codec.defaultWarnMode, bestEffort: !Codec.defaultStrictMode });
-    }
+    decodeWithDefaults = (value: unknown): T => this.decodeInFreshContext(value, {
+        warnMode: Codec.defaultWarnMode,
+        bestEffort: !Codec.defaultStrictMode
+    });
 
     // Do not make these `rename` args optional - this is intended
     // It is best to name _every_ type and projection, but we should not to enforce it strictly
