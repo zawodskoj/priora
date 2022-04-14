@@ -17,7 +17,7 @@ export namespace ObjectCodecImpl {
         }
 
         $decode(val: unknown, ctx: DecodingContext): P {
-            if (typeof val !== "object" || typeof val === null)
+            if (typeof val !== "object" || val === null)
                 return ctx.failure("Failed to decode object - object expected", val);
 
             const coercedVal = val as Record<keyof T, unknown>;
