@@ -1,5 +1,5 @@
-import {DecodingContext, DecodingFlags} from "./context";
-import {DecodingException, Result} from "./errors";
+import { DecodingContext } from "./context";
+import { DecodingException, Result } from "./errors";
 
 export function identity<T>(x: T): T { return x; }
 
@@ -11,11 +11,19 @@ export type UnwrapCodec<T extends Codec<any>> = CodecType<T>;
 export interface LoggingConfiguration {
     enabled: boolean
     always: boolean
-    logError(message: string, garbage: unknown): void
+    logError: (message: string, garbage: unknown) => void
+    logWarning?: (message: string, garbage: unknown) => void
+}
+
+export interface ErrorHandlingOptions {
+    UNSAFE_leaveInvalidValuesAsIs: boolean
 }
 
 export abstract class Codec<T> {
-    static defaultStrictMode: boolean = true;
+    static defaultErrorHandlingOptions: ErrorHandlingOptions = {
+        UNSAFE_leaveInvalidValuesAsIs: false
+    }
+
     static loggingConfiguration: LoggingConfiguration = {
         logError() { /* no output by default */ },
         always: false,
@@ -29,19 +37,19 @@ export abstract class Codec<T> {
 
     encode: (value: T) => unknown = v => { return this.$encode(v); }
 
-    private decodeInFreshContext(value: unknown, flags: DecodingFlags): T {
-        const runCtx = new DecodingContext(flags);
+    private decodeInFreshContext(value: unknown, errorHandlingOptions: ErrorHandlingOptions): T {
+        const runCtx = new DecodingContext(errorHandlingOptions);
 
         return this.$decode(value, runCtx);
     }
 
     decodeStrict: (value: unknown) => T = value => {
-        return this.decodeInFreshContext(value, { bestEffort: false });
+        return this.decodeInFreshContext(value, { UNSAFE_leaveInvalidValuesAsIs: false });
     };
 
     tryDecodeStrict = (value: unknown): Result<T> => {
         try {
-            return { T: "ok", value: this.decodeInFreshContext(value, { bestEffort: false }) };
+            return { T: "ok", value: this.decodeInFreshContext(value, { UNSAFE_leaveInvalidValuesAsIs: false }) };
         } catch (e) {
             if (e instanceof DecodingException) {
                 return {T: "error", exception: e};
@@ -52,12 +60,10 @@ export abstract class Codec<T> {
     };
 
     decodeLax = (value: unknown): T => this.decodeInFreshContext(value, {
-        bestEffort: true
+        UNSAFE_leaveInvalidValuesAsIs: true
     });
 
-    decodeWithDefaults = (value: unknown): T => this.decodeInFreshContext(value, {
-        bestEffort: !Codec.defaultStrictMode
-    });
+    decodeWithDefaults = (value: unknown): T => this.decodeInFreshContext(value, Codec.defaultErrorHandlingOptions);
 
     // Do not make these `rename` args optional - this is intended
     // It is best to name _every_ type and projection, but we should not to enforce it strictly

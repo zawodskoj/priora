@@ -1,16 +1,12 @@
 import { DecodingException } from "./errors";
-import { Codec } from "./codec";
-
-export interface DecodingFlags {
-    readonly bestEffort: boolean
-}
+import { Codec, ErrorHandlingOptions } from "./codec";
 
 export class DecodingContext {
     scope: string[] = []
     path: (string|number|undefined)[] = ["#"]
 
     constructor(
-        readonly flags: DecodingFlags
+        readonly errorHandlingOptions: ErrorHandlingOptions
     ) { }
 
     unsafeEnter(scopeName: string, path: string | number | undefined): void {
@@ -26,14 +22,14 @@ export class DecodingContext {
     failure<T>(message: string, garbage: unknown): T {
         const logCfg = Codec.loggingConfiguration;
 
-        if (logCfg.enabled && (logCfg.always || this.flags.bestEffort)) {
+        if (logCfg.enabled && (logCfg.always || this.errorHandlingOptions.UNSAFE_leaveInvalidValuesAsIs)) {
             logCfg.logError(
                 DecodingException.formatError(message, this.scope, this.path),
                 garbage
             )
         }
 
-        if (this.flags.bestEffort)
+        if (this.errorHandlingOptions.UNSAFE_leaveInvalidValuesAsIs)
             return garbage as T;
 
         throw new DecodingException(message, this.scope, this.path, garbage);
