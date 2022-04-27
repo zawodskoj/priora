@@ -1,5 +1,5 @@
 import { Codec } from "../codec";
-import { DecodingContext } from "../context";
+import { DecodingContext, EncodingContext } from "../context";
 
 export namespace ArrayCodecImpl {
     export function create<T>(typename: string, codec: Codec<T>): Codec<T[]> {
@@ -10,24 +10,44 @@ export namespace ArrayCodecImpl {
             const coercedArray = val as unknown[];
             const target = [] as T[];
 
-            for (let i = 0; i < coercedArray.length; i++){
-                ctx.unsafeEnter(`${typename}[${i}]`, i);
+            if (ctx.isTracingEnabled) {
+                for (let i = 0; i < coercedArray.length; i++){
+                    ctx.unsafeEnter(`${typename}[${i}]`, i);
 
-                try {
+                    try {
+                        target.push(codec.$decode(coercedArray[i], ctx));
+                    } finally {
+                        ctx.unsafeLeave();
+                    }
+                }
+            } else {
+                for (let i = 0; i < coercedArray.length; i++) {
                     target.push(codec.$decode(coercedArray[i], ctx));
-                } finally {
-                    ctx.unsafeLeave();
                 }
             }
 
             return target;
         }
 
-        function encode(val: T[]): unknown {
+        function encode(val: T[], ctx: EncodingContext): unknown {
             const target = [] as unknown[];
 
-            for (const elem of val) {
-                target.push(codec.$encode(elem));
+            if (ctx.isTracingEnabled) {
+                for (let i = 0; i < val.length; i++){
+                    const elem = val[i];
+
+                    ctx.unsafeEnter(`${typename}[${i}]`, i);
+
+                    try {
+                        target.push(codec.$encode(elem, ctx));
+                    } finally {
+                        ctx.unsafeLeave();
+                    }
+                }
+            } else {
+                for (let i = 0; i < val.length; i++) {
+                    target.push(codec.$encode(val[i], ctx));
+                }
             }
 
             return target;
@@ -51,30 +71,55 @@ export namespace ArrayCodecImpl {
             const coercedArray = val as unknown[];
             const target = [] as unknown as T;
 
-            for (let i = 0; i < codecs.length; i++){
-                const elem = coercedArray[i];
-                const codec = codecs[i];
+            if (ctx.isTracingEnabled) {
+                for (let i = 0; i < codecs.length; i++){
+                    const elem = coercedArray[i];
+                    const codec = codecs[i];
 
-                ctx.unsafeEnter(`${typename}[${i}]`, i);
+                    ctx.unsafeEnter(`${typename}[${i}]`, i);
 
-                try {
+                    try {
+                        target.push(codec.$decode(elem, ctx));
+                    } finally {
+                        ctx.unsafeLeave();
+                    }
+                }
+            } else {
+                for (let i = 0; i < codecs.length; i++) {
+                    const elem = coercedArray[i];
+                    const codec = codecs[i];
+
                     target.push(codec.$decode(elem, ctx));
-                } finally {
-                    ctx.unsafeLeave();
                 }
             }
 
             return target;
         }
 
-        function encode(val: T): unknown {
+        function encode(val: T, ctx: EncodingContext): unknown {
             const target = [] as unknown[];
 
-            for (let i = 0; i < codecs.length; i++){
-                const elem = val[i];
-                const codec = codecs[i];
 
-                target.push(codec.$encode(elem));
+            if (ctx.isTracingEnabled) {
+                for (let i = 0; i < codecs.length; i++){
+                    const elem = val[i];
+                    const codec = codecs[i];
+
+                    ctx.unsafeEnter(`${typename}[${i}]`, i);
+
+                    try {
+                        target.push(codec.$encode(elem, ctx));
+                    } finally {
+                        ctx.unsafeLeave();
+                    }
+                }
+            } else {
+                for (let i = 0; i < codecs.length; i++) {
+                    const elem = val[i];
+                    const codec = codecs[i];
+
+                    target.push(codec.$encode(elem, ctx));
+                }
             }
 
             return target;

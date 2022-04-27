@@ -1,6 +1,6 @@
 import { Codec } from "../codec";
 import { ObjectCodecImpl } from "./objectCodec";
-import { DecodingContext } from "../context";
+import { DecodingContext, EncodingContext } from "../context";
 import { Codecs } from "./index";
 import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
@@ -89,37 +89,58 @@ export class ClosedCasesCodec<
             return ctx.failure("Failed to decode cases - none matched", val);
         }
 
-        try {
-            ctx.unsafeEnter(this.name + "#" + discriminator, undefined);
-            const target = {
-                [this.discriminator]: discriminator
-            };
+        const target = {
+            [this.discriminator]: discriminator
+        };
 
+        if (ctx.isTracingEnabled) {
+            try {
+                ctx.unsafeEnter(this.name + "#" + discriminator, undefined);
+
+                for (const [propertyName, propertyCodec] of caseProperties) {
+                    ctx.unsafeEnter(this.name + "#" + discriminator + "." + propertyName, propertyName);
+                    try {
+                        target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as never;
+                    } finally {
+                        ctx.unsafeLeave();
+                    }
+                }
+            } finally {
+                ctx.unsafeLeave();
+            }
+        } else {
+            for (const [propertyName, propertyCodec] of caseProperties) {
+                target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as never;
+            }
+        }
+
+        return target as never;
+    }
+
+    $encode(val: CasesCodecResult<D, BS, SS, H>, ctx: EncodingContext): unknown {
+        const discriminator = val[this.discriminator as never];
+
+        const caseProperties = this.casesMap[discriminator];
+        if (!caseProperties)
+            return ctx.failure(`Invalid discriminator value ${discriminator}`, val);
+
+        const target = {
+            [this.discriminator]: discriminator
+        } as Record<string, unknown>;
+
+        if (ctx.isTracingEnabled) {
             for (const [propertyName, propertyCodec] of caseProperties) {
                 ctx.unsafeEnter(this.name + "#" + discriminator + "." + propertyName, propertyName);
                 try {
-                    target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as never;
+                    target[propertyName] = propertyCodec.$encode(val[propertyName as never], ctx);
                 } finally {
                     ctx.unsafeLeave();
                 }
             }
-
-            return target as never;
-        } finally {
-            ctx.unsafeLeave();
-        }
-    }
-
-    $encode(val: CasesCodecResult<D, BS, SS, H>): unknown {
-        const caseProperties = this.casesMap[val[this.discriminator as never]];
-        if (!caseProperties) throw new Error(); // TODO error message
-
-        const target = {
-            [this.discriminator]: val[this.discriminator as never]
-        } as Record<string, unknown>;
-
-        for (const [propertyName, propertyCodec] of caseProperties) {
-            target[propertyName] = propertyCodec.$encode(val[propertyName as never]);
+        } else {
+            for (const [propertyName, propertyCodec] of caseProperties) {
+                target[propertyName] = propertyCodec.$encode(val[propertyName as never], ctx);
+            }
         }
 
         return target;

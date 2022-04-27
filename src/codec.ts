@@ -1,4 +1,4 @@
-import { DecodingContext } from "./context";
+import { DecodingContext, EncodingContext } from "./context";
 import { DecodingException, Result } from "./errors";
 
 export function identity<T>(x: T): T { return x; }
@@ -15,13 +15,32 @@ export interface LoggingConfiguration {
     logWarning?: (message: string, garbage: unknown) => void
 }
 
+export enum ReportUnknownProperties {
+    NEVER = 0,
+    ON_ENCODE = 1,
+    ON_DECODE = 2,
+    ALWAYS = ON_ENCODE | ON_DECODE
+}
+
+export enum TracingMode {
+    NO_TRACING = 0,
+    FULL_TRACING = 1
+}
+
 export interface ErrorHandlingOptions {
+    encodeTracing: TracingMode
+    decodeTracing: TracingMode
+    reportUnknownProperties: ReportUnknownProperties
+
     UNSAFE_leaveInvalidValuesAsIs: boolean
 }
 
 export abstract class Codec<T> {
     static defaultErrorHandlingOptions: ErrorHandlingOptions = {
-        UNSAFE_leaveInvalidValuesAsIs: false
+        UNSAFE_leaveInvalidValuesAsIs: false,
+        encodeTracing: TracingMode.FULL_TRACING,
+        decodeTracing: TracingMode.FULL_TRACING,
+        reportUnknownProperties: ReportUnknownProperties.ALWAYS
     }
 
     static loggingConfiguration: LoggingConfiguration = {
@@ -33,9 +52,9 @@ export abstract class Codec<T> {
     abstract name: string
 
     abstract $decode(value: unknown, ctx: DecodingContext): T
-    abstract $encode(value: T): unknown
+    abstract $encode(value: T, ctx: EncodingContext): unknown
 
-    encode: (value: T) => unknown = v => { return this.$encode(v); }
+    encode: (value: T) => unknown = v => { return this.$encode(v, new EncodingContext(Codec.defaultErrorHandlingOptions)); }
 
     private decodeInFreshContext(value: unknown, errorHandlingOptions: ErrorHandlingOptions): T {
         const runCtx = new DecodingContext(errorHandlingOptions);
@@ -44,12 +63,18 @@ export abstract class Codec<T> {
     }
 
     decodeStrict: (value: unknown) => T = value => {
-        return this.decodeInFreshContext(value, { UNSAFE_leaveInvalidValuesAsIs: false });
+        return this.decodeInFreshContext(value, {
+            ...Codec.defaultErrorHandlingOptions,
+            UNSAFE_leaveInvalidValuesAsIs: false
+        });
     };
 
     tryDecodeStrict = (value: unknown): Result<T> => {
         try {
-            return { T: "ok", value: this.decodeInFreshContext(value, { UNSAFE_leaveInvalidValuesAsIs: false }) };
+            return { T: "ok", value: this.decodeInFreshContext(value, {
+                ...Codec.defaultErrorHandlingOptions,
+                UNSAFE_leaveInvalidValuesAsIs: false
+            }) };
         } catch (e) {
             if (e instanceof DecodingException) {
                 return {T: "error", exception: e};
@@ -60,6 +85,7 @@ export abstract class Codec<T> {
     };
 
     decodeLax = (value: unknown): T => this.decodeInFreshContext(value, {
+        ...Codec.defaultErrorHandlingOptions,
         UNSAFE_leaveInvalidValuesAsIs: true
     });
 
@@ -108,7 +134,12 @@ export abstract class Codec<T> {
         return new OptValuesCodec(this.name + " | undefined | null", this, undefined, null);
     }
 
-    static make<T>(name: string, decode: (v: unknown, ctx: DecodingContext) => T, encode: (v: T) => unknown, suppressContext: boolean = false): Codec<T> {
+    static make<T>(
+        name: string,
+        decode: (v: unknown, ctx: DecodingContext) => T,
+        encode: (v: T, ctx: EncodingContext) => unknown,
+        suppressContext: boolean = false
+    ): Codec<T> {
         return new LambdaCodec<T>(name, decode, encode, suppressContext);
     }
 }
@@ -122,20 +153,27 @@ class OptValuesCodec<T, O extends undefined | null> extends Codec<T | O> {
     ) { super(); }
 
     $decode(value: unknown, ctx: DecodingContext): T | O {
+        if (value === this.o1 || value === this.o2) return value as O;
+        if (!ctx.isTracingEnabled) return this.base.$decode(value, ctx);
+
         ctx.unsafeEnter(this.name, undefined);
         try {
-            if (value === this.o1 || value === this.o2) return value as O;
-
             return this.base.$decode(value, ctx);
         } finally {
             ctx.unsafeLeave();
         }
     }
 
-    $encode(value: T | O): unknown {
+    $encode(value: T | O, ctx: EncodingContext): unknown {
         if (value === this.o1 || value === this.o2) return value;
+        if (!ctx.isTracingEnabled) return this.base.$encode(value as T, ctx);
 
-        return this.base.$encode(value as T);
+        ctx.unsafeEnter(this.name, undefined);
+        try {
+            return this.base.$encode(value as T, ctx);
+        } finally {
+            ctx.unsafeLeave();
+        }
     }
 }
 
@@ -162,8 +200,8 @@ class OrElseCodec<T> extends Codec<T> {
         }
     }
 
-    $encode(value: T): unknown {
-        return this.base.$encode(value as T);
+    $encode(value: T, ctx: EncodingContext): unknown {
+        return this.base.$encode(value as T, ctx);
     }
 }
 
@@ -184,10 +222,10 @@ export class OptionalCodec<T> extends Codec<T | undefined> {
         }
     }
 
-    $encode(value: T | undefined): unknown {
+    $encode(value: T | undefined, ctx: EncodingContext): unknown {
         if (value === undefined) return value;
 
-        return this.base.$encode(value as T);
+        return this.base.$encode(value as T, ctx);
     }
 }
 
@@ -195,12 +233,12 @@ class LambdaCodec<T> extends Codec<T> {
     constructor(
         readonly name: string,
         private readonly _decode: (v: unknown, ctx: DecodingContext) => T,
-        private readonly _encode: (v: T) => unknown,
+        private readonly _encode: (v: T, ctx: EncodingContext) => unknown,
         private readonly suppressContext: boolean
     ) { super(); }
 
     $decode(value: unknown, ctx: DecodingContext): T {
-        if (this.suppressContext) {
+        if (!ctx.isTracingEnabled || this.suppressContext) {
             return this._decode(value, ctx);
         }
 
@@ -212,8 +250,17 @@ class LambdaCodec<T> extends Codec<T> {
         }
     }
 
-    $encode(value: T): unknown {
-        return this._encode(value);
+    $encode(value: T, ctx: EncodingContext): unknown {
+        if (!ctx.isTracingEnabled || this.suppressContext) {
+            return this._encode(value, ctx);
+        }
+
+        ctx.unsafeEnter(this.name, undefined);
+        try {
+            return this._encode(value, ctx);
+        } finally {
+            ctx.unsafeLeave();
+        }
     }
 }
 
@@ -222,10 +269,13 @@ class CodecProjection<T, T2> extends Codec<T2> {
         readonly name: string,
         private readonly base: Codec<T>,
         private readonly decodeToT2: (v: T, ctx: DecodingContext) => T2,
-        private readonly encodeToT: (v: T2) => T
+        private readonly encodeToT: (v: T2, ctx: EncodingContext) => T
     ) { super(); }
 
     $decode(value: unknown, ctx: DecodingContext): T2 {
+        if (!ctx.isTracingEnabled)
+            return this.decodeToT2(this.base.$decode(value, ctx), ctx);
+
         ctx.unsafeEnter(this.name, undefined);
         try {
             return this.decodeToT2(this.base.$decode(value, ctx), ctx);
@@ -234,7 +284,15 @@ class CodecProjection<T, T2> extends Codec<T2> {
         }
     }
 
-    $encode(value: T2): unknown {
-        return this.base.$encode(this.encodeToT(value));
+    $encode(value: T2, ctx: EncodingContext): unknown {
+        if (!ctx.isTracingEnabled)
+            return this.base.$encode(this.encodeToT(value, ctx), ctx);
+
+        ctx.unsafeEnter(this.name, undefined);
+        try {
+            return this.base.$encode(this.encodeToT(value, ctx), ctx);
+        } finally {
+            ctx.unsafeLeave();
+        }
     }
 }

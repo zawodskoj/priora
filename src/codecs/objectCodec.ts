@@ -1,5 +1,5 @@
-import { Codec, OptionalCodec } from "../codec";
-import { DecodingContext } from "../context";
+import { Codec, ReportUnknownProperties, OptionalCodec } from "../codec";
+import { DecodingContext, EncodingContext } from "../context";
 
 export namespace ObjectCodecImpl {
     export type ObjectSchema<T = any> = {
@@ -18,7 +18,7 @@ export namespace ObjectCodecImpl {
         constructor(
             readonly name: string,
             readonly schema: S,
-            private readonly properties: [keyof T & string, Codec<unknown>][],
+            private readonly properties: [string & keyof T, Codec<unknown>][],
             private readonly isPartial: boolean,
             protected readonly suppressContext: boolean
         ) {
@@ -32,30 +32,95 @@ export namespace ObjectCodecImpl {
             const coercedVal = val as Record<keyof T, unknown>;
             const target = { } as T;
 
-            for (const [propertyName, propertyCodec] of this.properties) {
-                if (!this.isPartial || coercedVal[propertyName] !== undefined) {
-                    if (this.suppressContext) {
-                        target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as T[typeof propertyName];
+            const decodeSingleField = (propertyName: string & keyof T, propertyCodec: Codec<T[keyof T]>) => {
+                const propVal = coercedVal[propertyName];
+
+                if (!this.isPartial || propVal !== undefined) {
+                    if (this.suppressContext || !ctx.isTracingEnabled) {
+                        target[propertyName] = propertyCodec.$decode(propVal, ctx) as T[typeof propertyName];
                     } else {
                         ctx.unsafeEnter(this.name + "." + propertyName, propertyName);
                         try {
-                            target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as T[typeof propertyName];
+                            target[propertyName] = propertyCodec.$decode(propVal, ctx) as T[typeof propertyName];
                         } finally {
                             ctx.unsafeLeave();
                         }
                     }
+                }
+            };
+
+            if (ctx.errorHandlingOptions.reportUnknownProperties & ReportUnknownProperties.ON_DECODE) {
+                for (const propertyName in coercedVal) {
+                    const propertyCodec = this.schema[propertyName];
+
+                    if (!propertyCodec) {
+                        ctx.warn(`Unknown property ${propertyName} was not declared in schema`, coercedVal);
+                        continue;
+                    }
+
+                    decodeSingleField(propertyName, propertyCodec as unknown as Codec<T[keyof T]>);
+                }
+
+                if (!this.isPartial) {
+                    for (const [propertyName] of this.properties) {
+                        if (propertyName in target)
+                            continue;
+
+                        return ctx.failure(`Missing property ${propertyName}`, coercedVal);
+                    }
+                }
+            } else {
+                for (const [propertyName, propertyCodec] of this.properties) {
+                    decodeSingleField(propertyName, propertyCodec as Codec<T[keyof T]>);
                 }
             }
 
             return target as unknown as P;
         }
 
-        $encode(val: P): unknown {
+        $encode(val: P, ctx: EncodingContext): unknown {
             const target = { } as Record<keyof T, unknown>;
 
-            for (const [propertyName, propertyCodec] of this.properties) {
-                if (!this.isPartial || val[propertyName as never] !== undefined) {
-                    target[propertyName] = propertyCodec.$encode(val[propertyName as never]);
+            const encodeSingleField = (propertyName: string & keyof T, propertyCodec: Codec<unknown>) => {
+                const propVal = val[propertyName as never];
+
+                if (!this.isPartial || propVal !== undefined) {
+                    if (this.suppressContext || !ctx.isTracingEnabled) {
+                        target[propertyName] = propertyCodec.$encode(propVal, ctx);
+                    } else {
+                        ctx.unsafeEnter(this.name + "." + propertyName, propertyName);
+                        try {
+                            target[propertyName] = propertyCodec.$encode(propVal, ctx);
+                        } finally {
+                            ctx.unsafeLeave();
+                        }
+                    }
+                }
+            };
+
+            if (ctx.errorHandlingOptions.reportUnknownProperties & ReportUnknownProperties.ON_DECODE) {
+                for (const propertyName in val) {
+                    const propertyCodec = this.schema[propertyName as never];
+
+                    if (!propertyCodec) {
+                        ctx.warn(`Unknown property ${propertyName} was not declared in schema`, val);
+                        continue;
+                    }
+
+                    encodeSingleField(propertyName as never, propertyCodec);
+                }
+
+                if (!this.isPartial) {
+                    for (const [propertyName] of this.properties) {
+                        if (propertyName in target)
+                            continue;
+
+                        return ctx.failure(`Missing property ${propertyName}`, val);
+                    }
+                }
+            } else {
+                for (const [propertyName, propertyCodec] of this.properties) {
+                    encodeSingleField(propertyName, propertyCodec);
                 }
             }
 

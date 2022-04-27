@@ -1,5 +1,5 @@
 import { Codec } from "../codec";
-import { DecodingContext } from "../context";
+import { DecodingContext, EncodingContext } from "../context";
 import { KeyCodec } from "../keyCodec";
 
 export namespace RecordCodecImpl {
@@ -12,15 +12,25 @@ export namespace RecordCodecImpl {
 
             const target = {} as Record<L, T>;
 
-            for (const [k, v] of Object.entries(val as object)) {
-                if (!partial || v !== undefined) {
-                    ctx.unsafeEnter(typename + "." + k, k);
-                    try {
+            if (ctx.isTracingEnabled) {
+                for (const [k, v] of Object.entries(val as object)) {
+                    if (!partial || v !== undefined) {
+                        ctx.unsafeEnter(typename + "." + k, k);
+                        try {
+                            const decodedKey = keyCodec?.decode(k, ctx) ?? (k as L);
+
+                            target[decodedKey] = codec.$decode(v, ctx);
+                        } finally {
+                            ctx.unsafeLeave();
+                        }
+                    }
+                }
+            } else {
+                for (const [k, v] of Object.entries(val as object)) {
+                    if (!partial || v !== undefined) {
                         const decodedKey = keyCodec?.decode(k, ctx) ?? (k as L);
 
                         target[decodedKey] = codec.$decode(v, ctx);
-                    } finally {
-                        ctx.unsafeLeave();
                     }
                 }
             }
@@ -28,14 +38,29 @@ export namespace RecordCodecImpl {
             return target;
         }
 
-        function encode(val: Record<L, T>): unknown {
+        function encode(val: Record<L, T>, ctx: EncodingContext): unknown {
             const target = {} as Record<string, unknown>;
 
-            for (const [k, v] of Object.entries(val)) {
-                if (!partial || v !== undefined) {
-                    const encodedKey = keyCodec?.encode(k as L) ?? k;
+            if (ctx.isTracingEnabled) {
+                for (const [k, v] of Object.entries(val)) {
+                    if (!partial || v !== undefined) {
+                        ctx.unsafeEnter(typename + "." + k, k);
+                        try {
+                            const encodedKey = keyCodec?.encode(k as L) ?? k;
 
-                    target[encodedKey] = codec.$encode(v as T);
+                            target[encodedKey] = codec.$encode(v as T, ctx);
+                        } finally {
+                            ctx.unsafeLeave();
+                        }
+                    }
+                }
+            } else {
+                for (const [k, v] of Object.entries(val)) {
+                    if (!partial || v !== undefined) {
+                        const encodedKey = keyCodec?.encode(k as L) ?? k;
+
+                        target[encodedKey] = codec.$encode(v as T, ctx);
+                    }
                 }
             }
 
@@ -54,27 +79,49 @@ export namespace RecordCodecImpl {
 
             const target = new Map<L, T>();
 
-            for (const [k, v] of Object.entries(val as object)) {
-                ctx.unsafeEnter(typename + "." + k, k);
-                try {
+            if (ctx.isTracingEnabled) {
+                for (const [k, v] of Object.entries(val as object)) {
+                    ctx.unsafeEnter(typename + "." + k, k);
+                    try {
+                        const decodedKey = keyCodec?.decode(k, ctx) ?? (k as unknown as L);
+
+                        target.set(decodedKey, codec.$decode(v, ctx));
+                    } finally {
+                        ctx.unsafeLeave();
+                    }
+                }
+            } else {
+                for (const [k, v] of Object.entries(val as object)) {
                     const decodedKey = keyCodec?.decode(k, ctx) ?? (k as unknown as L);
 
                     target.set(decodedKey, codec.$decode(v, ctx));
-                } finally {
-                    ctx.unsafeLeave();
                 }
             }
 
             return target;
         }
 
-        function encode(val: Map<L, T>): unknown {
+        function encode(val: Map<L, T>, ctx: EncodingContext): unknown {
             const target = {} as Record<string, unknown>;
 
-            for (const [k, v] of val.entries()) {
-                const encodedKey = keyCodec?.encode(k as L) ?? (k as unknown as string);
+            if (ctx.isTracingEnabled) {
+                for (const [k, v] of val.entries()) {
+                    // NOTE - no way to enter context before decoding key
+                    // (at least keyCodec does not have contexts and should not throw)
+                    const encodedKey = keyCodec?.encode(k as L) ?? (k as unknown as string);
 
-                target[encodedKey] = codec.$encode(v as T);
+                    ctx.unsafeEnter(typename + "." + k, encodedKey);
+                    try {
+                        target[encodedKey] = codec.$encode(v as T, ctx);
+                    } finally {
+                        ctx.unsafeLeave();
+                    }
+                }
+            } else {
+                for (const [k, v] of val.entries()) {
+                    const encodedKey = keyCodec?.encode(k as L) ?? (k as unknown as string);
+                    target[encodedKey] = codec.$encode(v as T, ctx);
+                }
             }
 
             return target;

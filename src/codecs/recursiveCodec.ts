@@ -1,5 +1,5 @@
 import { Codec, CodecType } from "../codec";
-import { DecodingContext } from "../context";
+import { DecodingContext, EncodingContext } from "../context";
 import { ObjectCodecImpl } from "./objectCodec";
 
 export namespace RecursiveCodecImpl {
@@ -24,8 +24,8 @@ export namespace RecursiveCodecImpl {
             return getInstance().$decode(val, ctx);
         }
 
-        function encode(val: Result): unknown {
-            return getInstance().$encode(val);
+        function encode(val: Result, ctx: EncodingContext): unknown {
+            return getInstance().$encode(val, ctx);
         }
 
         return knot = Codec.make(typename, decode, encode);
