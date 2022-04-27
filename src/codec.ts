@@ -3,7 +3,10 @@ import {DecodingException, Result} from "./errors";
 
 export function identity<T>(x: T): T { return x; }
 
-export type UnwrapCodec<T extends Codec<any>> = T extends Codec<infer C> ? C : never;
+export type CodecType<T extends Codec<any>> = T extends Codec<infer C> ? C : never;
+
+/** @deprecated use CodecType */
+export type UnwrapCodec<T extends Codec<any>> = CodecType<T>;
 
 export interface LoggingConfiguration {
     enabled: boolean
@@ -14,7 +17,7 @@ export interface LoggingConfiguration {
 export abstract class Codec<T> {
     static defaultStrictMode: boolean = true;
     static loggingConfiguration: LoggingConfiguration = {
-        logError(message, garbage) { /* no output by default */ },
+        logError() { /* no output by default */ },
         always: false,
         enabled: true
     };

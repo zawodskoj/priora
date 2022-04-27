@@ -1,4 +1,4 @@
-import {DecodingContext} from "./context";
+import { DecodingContext } from "./context";
 
 export abstract class KeyCodec<T> {
     abstract name: string

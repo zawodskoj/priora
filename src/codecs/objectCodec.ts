@@ -1,9 +1,8 @@
-import {Codec, UnwrapCodec} from "../codec";
-import {DecodingContext} from "../context";
+import { Codec } from "../codec";
+import { DecodingContext } from "../context";
 
 export namespace ObjectCodecImpl {
     export type ObjectSchema<T = any> = { [key in keyof T]: Codec<T[key]> }
-    export type UnwrapSchema<T extends ObjectSchema> = { [key in keyof T]: UnwrapCodec<T[key]>};
 
     class Impl<T extends object, P extends T | Partial<T>> extends Codec<P> {
         constructor(

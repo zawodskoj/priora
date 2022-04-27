@@ -1,6 +1,6 @@
-import {CasesCodec} from "./casesCodec";
-import {Codec, UnwrapCodec} from "../codec";
-import {Codecs} from "./index";
+import { CasesCodec } from "./casesCodec";
+import { Codecs } from "./index";
+import { CodecType } from "../codec";
 
 describe("CasesCodec2 tests", function () {
     test("Single empty case", () => {
@@ -137,14 +137,17 @@ describe("CasesCodec2 tests", function () {
             .empty("bar")
             .close();
 
-        const casesV: UnwrapCodec<typeof casesCodec> = {
+        const casesV: CodecType<typeof casesCodec> = {
             type: "foo",
             bar: "123",
             base: 123
         }
 
-        const casesP: Partial<UnwrapCodec<typeof casesCodec>> = {
+        const casesP: Partial<CodecType<typeof casesCodec>> = {
             base: 123
         };
+
+        void casesV;
+        void casesP;
     })
 });

@@ -1,5 +1,5 @@
-import {DecodingException} from "./errors";
-import {Codec} from "./codec";
+import { DecodingException } from "./errors";
+import { Codec } from "./codec";
 
 export interface DecodingFlags {
     readonly bestEffort: boolean

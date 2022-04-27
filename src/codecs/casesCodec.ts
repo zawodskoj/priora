@@ -1,8 +1,8 @@
-import {Codec} from "../codec";
-import {ObjectCodecImpl} from "./objectCodec";
+import { Codec } from "../codec";
+import { ObjectCodecImpl } from "./objectCodec";
+import { DecodingContext } from "../context";
+import { Codecs } from "./index";
 import ObjectSchema = ObjectCodecImpl.ObjectSchema;
-import {DecodingContext} from "../context";
-import {Codecs} from "./index";
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 
 export type CasesCodecResult<
@@ -76,6 +76,8 @@ export class ClosedCasesCodec<
         }
 
         const discriminator = coercedVal[this.discriminator];
+
+        // noinspection SuspiciousTypeOfGuard
         if (typeof discriminator !== "string") {
             return ctx.failure("Failed to decode cases - discriminator is not a string", val);
         }
@@ -210,7 +212,7 @@ export class CasesCodec<
         )
     }
 
-    narrow<C extends Exclude<CH, OH>>(caseName: C): CasesCodec<D, B, S, Exclude<CH, C>, Exclude<OH, C>> {
+    narrow<C extends Exclude<CH, OH>>(_caseName: C): CasesCodec<D, B, S, Exclude<CH, C>, Exclude<OH, C>> {
         return this as never;
     }
 

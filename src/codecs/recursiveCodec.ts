@@ -1,6 +1,6 @@
-import {Codec} from "../codec";
-import {DecodingContext} from "../context";
-import {ObjectCodecImpl} from "./objectCodec";
+import { Codec } from "../codec";
+import { DecodingContext } from "../context";
+import { ObjectCodecImpl } from "./objectCodec";
 
 export namespace RecursiveCodecImpl {
     export function create<T extends object, C extends ObjectCodecImpl.ObjectSchema<T>>(typename: string, mkCodec: (_: Codec<T>) => C): Codec<T> {

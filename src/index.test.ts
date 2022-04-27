@@ -1,6 +1,5 @@
-import {Codecs, Codecs as C} from "./codecs";
-import {Codec, UnwrapCodec} from "./codec";
-import PickCase = Codecs.PickCase;
+import { Codecs as C } from "./codecs";
+import { Codec } from "./codec";
 
 export {};
 
@@ -47,7 +46,7 @@ test("kek", () => {
         qux: { qux: C.boolean },
     })
 
-    type Cases = UnwrapCodec<typeof cases>;
+    type Cases = CodecType<typeof cases>;
     type CasesK = "foo" | "bar" | "qux";
     type CasesOG<T extends CasesK = CasesK> = Cases & { type: T };
     type CasesG<T extends CasesK = CasesK> = PickCase<typeof cases, T>;

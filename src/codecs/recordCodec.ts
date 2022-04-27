@@ -1,6 +1,6 @@
-import {Codec} from "../codec";
-import {DecodingContext} from "../context";
-import {KeyCodec} from "../keyCodec";
+import { Codec } from "../codec";
+import { DecodingContext } from "../context";
+import { KeyCodec } from "../keyCodec";
 
 export namespace RecordCodecImpl {
     export function create<T, L extends string>(codec: Codec<T>, keyCodec: KeyCodec<L> | undefined, partial: boolean): Codec<Record<L, T>> {

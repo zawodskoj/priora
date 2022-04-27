@@ -1,5 +1,5 @@
-import {Codec} from "../codec";
-import {DecodingContext} from "../context";
+import { Codec } from "../codec";
+import { DecodingContext } from "../context";
 
 export namespace ArrayCodecImpl {
     export function create<T>(typename: string, codec: Codec<T>): Codec<T[]> {

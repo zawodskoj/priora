@@ -1,10 +1,10 @@
-import {Codec, identity} from "../codec";
-import {ObjectCodecImpl} from "./objectCodec";
-import {CasesCodec, PickCase as PickCase_} from "./casesCodec";
-import {ArrayCodecImpl} from "./arrayCodec";
-import {RecursiveCodecImpl} from "./recursiveCodec";
-import {RecordCodecImpl} from "./recordCodec";
-import {KeyCodec} from "../keyCodec";
+import { Codec, identity } from "../codec";
+import { ObjectCodecImpl } from "./objectCodec";
+import { CasesCodec, PickCase as PickCase_ } from "./casesCodec";
+import { ArrayCodecImpl } from "./arrayCodec";
+import { RecursiveCodecImpl } from "./recursiveCodec";
+import { RecordCodecImpl } from "./recordCodec";
+import { KeyCodec } from "../keyCodec";
 
 export namespace Codecs {
     import TupleCodecs = ArrayCodecImpl.TupleCodecs;
