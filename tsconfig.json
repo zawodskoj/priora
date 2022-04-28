@@ -18,6 +18,7 @@
     "downlevelIteration": true,
     "sourceMap": true,
     "declaration": true,
+    "emitDeclarationOnly": true,
     "noImplicitAny": true,
     "outDir": "dist/"
   },

@@ -1,0 +1,1 @@
+export const contextualMacro = function(x: any, ctx: string, path: string, f: () => void) { return 0; };

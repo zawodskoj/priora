@@ -24,7 +24,12 @@
   },
   "keywords": [],
   "devDependencies": {
+    "@babel/cli": "^7.17.6",
+    "@babel/core": "^7.17.9",
+    "@babel/preset-typescript": "^7.16.7",
     "@types/jest": "^27.4.1",
+    "babel-plugin-inline-functions": "1.0.1",
+    "babel-plugin-macros": "^3.1.0",
     "jest": "^27.5.1",
     "ts-jest": "^27.1.4",
     "tslib": "^2.3.1",
