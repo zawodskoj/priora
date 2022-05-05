@@ -4,7 +4,7 @@ import { DecodingContext } from "../context";
 export namespace ObjectCodecImpl {
     export type ObjectSchema<T = any> = { [key in keyof T]: Codec<T[key]> }
 
-    type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
+    export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
     type OptKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? key : never }[keyof T];
     type ReqKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? never : key }[keyof T];
     export type ObjectResult<T> = Expand<Pick<T, ReqKeys<T>> & Partial<Pick<T, OptKeys<T>>>>

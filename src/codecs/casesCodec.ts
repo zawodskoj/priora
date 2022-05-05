@@ -5,6 +5,7 @@ import { Codecs } from "./index";
 import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 import ObjectResult = ObjectCodecImpl.ObjectResult;
+import Expand = ObjectCodecImpl.Expand;
 
 export type CasesCodecResult<
     D extends string,
@@ -22,7 +23,7 @@ export type CasesSchema<
     [key in H]: ObjectSchema<S[key]>
 }
 
-export type PickCase<C, K extends string> =
+type PickCase0<C, K extends string> =
     C extends ClosedCasesCodec<infer D, infer B, infer S, infer H>
         ? [K] extends [H]
             ? ObjectResult<B> & { [key in K]: ObjectResult<S[key]> & { [_ in D]: key } }[K]
@@ -32,6 +33,8 @@ export type PickCase<C, K extends string> =
                 ? ObjectResult<B> & { [key in K]: ObjectResult<S[key]> & { [_ in D]: key } }[K]
                 : never
             : never
+
+export type PickCase<C, K extends string> = Expand<PickCase0<C, K>>;
 
 export class ClosedCasesCodec<
     D extends string,
