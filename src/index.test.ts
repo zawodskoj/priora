@@ -1,5 +1,5 @@
 import { Codecs as C } from "./codecs";
-import { Codec } from "./codec";
+import { Codec, CodecType } from "./codec";
 
 export {};
 
@@ -36,6 +36,29 @@ primitiveCodec(
     [true, false],
     [0, 123, "123", { foo: "bar" }]
 );
+
+test("optionals", () => {
+    const codec = C.object("test", {
+        foo: C.string,
+        bar: C.string.nullable,
+        baz: C.string.optional
+    });
+
+    type CType = CodecType<typeof codec>;
+    const a: CType = {
+        foo: "",
+        bar: null,
+        baz: ""
+    }
+
+    const b: CType = {
+        foo: "",
+        bar: null
+    }
+
+    const realA: { foo: string, bar: string | null, baz?: string | undefined } = a;
+    const realB: { foo: string, bar: string | null, baz?: string | undefined } = b;
+})
 
 /*
 

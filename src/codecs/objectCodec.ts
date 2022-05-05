@@ -5,8 +5,8 @@ export namespace ObjectCodecImpl {
     export type ObjectSchema<T = any> = { [key in keyof T]: Codec<T[key]> }
 
     type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
-    type OptKeys<T> = { [key in keyof T]: T[key] extends undefined ? key : never }[keyof T];
-    type ReqKeys<T> = { [key in keyof T]: T[key] extends undefined ? never : key }[keyof T];
+    type OptKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? key : never }[keyof T];
+    type ReqKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? never : key }[keyof T];
     type ObjectResult<T> = Expand<Partial<Pick<T, OptKeys<T>>> & Pick<T, ReqKeys<T>>>
 
     class Impl<T extends object, P extends ObjectResult<T> | Partial<ObjectResult<T>>> extends Codec<P> {
