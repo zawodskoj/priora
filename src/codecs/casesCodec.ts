@@ -4,6 +4,7 @@ import { DecodingContext } from "../context";
 import { Codecs } from "./index";
 import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
+import ObjectResult = ObjectCodecImpl.ObjectResult;
 
 export type CasesCodecResult<
     D extends string,
@@ -11,7 +12,7 @@ export type CasesCodecResult<
     S extends Record<H, object>,
     H extends string
 > = {
-    [key in H]: B & S[key] & { [_ in D]: key }
+    [key in H]: ObjectResult<B & S[key] & { [_ in D]: key }>
 }[H]
 
 export type CasesSchema<
@@ -109,11 +110,11 @@ export class ClosedCasesCodec<
     }
 
     $encode(val: CasesCodecResult<D, B, S, H>): unknown {
-        const caseProperties = this.casesMap[val[this.discriminator]];
+        const caseProperties = this.casesMap[val[this.discriminator as never]];
         if (!caseProperties) throw new Error(); // TODO error message
 
         const target = {
-            [this.discriminator]: val[this.discriminator]
+            [this.discriminator]: val[this.discriminator as never]
         } as Record<string, unknown>;
 
         for (const [propertyName, propertyCodec] of caseProperties) {

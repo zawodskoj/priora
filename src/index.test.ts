@@ -60,6 +60,20 @@ test("optionals", () => {
     const realB: { foo: string, bar: string | null, baz?: string | undefined } = b;
 })
 
+test("recursives and optionals", () => {
+    interface RecType {
+        foo: string
+        bar?: string
+        baz?: RecType[]
+    }
+
+    const codec = C.recursive<RecType>("test")(self => ({
+        foo: C.string,
+        bar: C.string.optional,
+        baz: C.array(self).optional
+    }));
+})
+
 /*
 
 test("kek", () => {
