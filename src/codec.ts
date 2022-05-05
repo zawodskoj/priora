@@ -29,25 +29,19 @@ export abstract class Codec<T> {
 
     encode: (value: T) => unknown = v => { return this.$encode(v); }
 
-    private parseInFreshContext(json: string, flags: DecodingFlags): T {
+    private decodeInFreshContext(value: unknown, flags: DecodingFlags): T {
         const runCtx = new DecodingContext(flags);
 
-        return this.$decode(JSON.parse(json), runCtx);
+        return this.$decode(value, runCtx);
     }
 
-    /** @deprecated use parseStrict */
-    decodeStrict: (obj: unknown) => T = obj => {
-        return this.parseInFreshContext(JSON.stringify(obj), { bestEffort: false });
+    decodeStrict: (value: unknown) => T = value => {
+        return this.decodeInFreshContext(value, { bestEffort: false });
     };
 
-
-    parseStrict: (json: string) => T = json => {
-        return this.parseInFreshContext(json, { bestEffort: false });
-    };
-
-    tryParseStrict = (json: string): Result<T> => {
+    tryDecodeStrict = (value: unknown): Result<T> => {
         try {
-            return { T: "ok", value: this.parseInFreshContext(json, { bestEffort: false }) };
+            return { T: "ok", value: this.decodeInFreshContext(value, { bestEffort: false }) };
         } catch (e) {
             if (e instanceof DecodingException) {
                 return {T: "error", exception: e};
@@ -57,11 +51,11 @@ export abstract class Codec<T> {
         }
     };
 
-    parseLax = (json: string): T => this.parseInFreshContext(json, {
+    decodeLax = (value: unknown): T => this.decodeInFreshContext(value, {
         bestEffort: true
     });
 
-    parseWithDefaults = (json: string): T => this.parseInFreshContext(json, {
+    decodeWithDefaults = (value: unknown): T => this.decodeInFreshContext(value, {
         bestEffort: !Codec.defaultStrictMode
     });
 
