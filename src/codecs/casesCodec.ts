@@ -23,18 +23,16 @@ export type CasesSchema<
     [key in H]: ObjectSchema<S[key]>
 }
 
-type PickCase0<C, K extends string> =
+type PickCase<C, K extends string> =
     C extends ClosedCasesCodec<infer D, infer B, infer S, infer H>
         ? [K] extends [H]
-            ? ObjectResult<B> & { [key in K]: ObjectResult<S[key]> & { [_ in D]: key } }[K]
+            ? { [key in K]: ObjectResult<B & S[key]> & { [_ in D]: key } }[K]
             : never
         : C extends CasesCodec<infer D, infer B, infer S, infer CH, infer OH>
             ? [K] extends [OH]
-                ? ObjectResult<B> & { [key in K]: ObjectResult<S[key]> & { [_ in D]: key } }[K]
+                ? { [key in K]: ObjectResult<B & S[key]> & { [_ in D]: key } }[K]
                 : never
             : never
-
-export type PickCase<C, K extends string> = Expand<PickCase0<C, K>>;
 
 export class ClosedCasesCodec<
     D extends string,
