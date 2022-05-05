@@ -8,6 +8,7 @@ export namespace ObjectCodecImpl {
     type OptKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? key : never }[keyof T];
     type ReqKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? never : key }[keyof T];
     export type ObjectResult<T> = Expand<Pick<T, ReqKeys<T>> & Partial<Pick<T, OptKeys<T>>>>
+    export type ObjectResultNex<T> = Pick<T, ReqKeys<T>> & Partial<Pick<T, OptKeys<T>>>
 
     class Impl<T extends object, P extends ObjectResult<T> | Partial<ObjectResult<T>>> extends Codec<P> {
         constructor(

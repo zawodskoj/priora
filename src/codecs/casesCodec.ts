@@ -6,6 +6,7 @@ import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 import ObjectResult = ObjectCodecImpl.ObjectResult;
 import Expand = ObjectCodecImpl.Expand;
+import ObjectResultNex = ObjectCodecImpl.ObjectResultNex;
 
 export type CasesCodecResult<
     D extends string,
@@ -23,13 +24,17 @@ export type CasesSchema<
     [key in H]: ObjectSchema<S[key]>
 }
 
+type CObj<S> = {
+    [key in keyof S]: ObjectResult<S[key]>
+}
+
 export type PickCase<C, K extends string> =
     C extends ClosedCasesCodec<infer D, infer B, infer S, infer H>
-        ? [K] extends [H]
+        ? K extends H
             ? { [key in K]: ObjectResult<B & S[key]> & { [_ in D]: key } }[K]
             : never
         : C extends CasesCodec<infer D, infer B, infer S, infer CH, infer OH>
-            ? [K] extends [OH]
+            ? K extends OH
                 ? { [key in K]: ObjectResult<B & S[key]> & { [_ in D]: key } }[K]
                 : never
             : never

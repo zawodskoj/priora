@@ -58,6 +58,21 @@ describe("CasesCodec2 tests", function () {
         // invalid case
         expect(() => codec.decodeStrict({ type: "baz" }))
             .toThrow("Failed to decode cases - none matched");
+
+        const codec2 = CasesCodec.make<"foo" | "bar" | "baz">("codec")
+            .withDiscriminator("type")
+            .single("foo", { shared: Codecs.string })
+            .single("bar", { shared: Codecs.number })
+            .single("baz", { shared: Codecs.boolean })
+            .close();
+
+        type Codec2<T extends "foo" | "bar" | "baz"> = Codecs.PickCase<typeof codec2, T>;
+
+        function generic<T extends "foo" | "bar">() {
+            const p = null as never as Codec2<T>;
+
+            const a: string | number = p.shared;
+        }
     })
 
     test("Incomplete codec will not typecheck", () => {
