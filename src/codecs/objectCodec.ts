@@ -4,7 +4,12 @@ import { DecodingContext } from "../context";
 export namespace ObjectCodecImpl {
     export type ObjectSchema<T = any> = { [key in keyof T]: Codec<T[key]> }
 
-    class Impl<T extends object, P extends T | Partial<T>> extends Codec<P> {
+    type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
+    type OptKeys<T> = { [key in keyof T]: T[key] extends undefined ? key : never }[keyof T];
+    type ReqKeys<T> = { [key in keyof T]: T[key] extends undefined ? never : key }[keyof T];
+    type ObjectResult<T> = Expand<Partial<Pick<T, OptKeys<T>>> & Pick<T, ReqKeys<T>>>
+
+    class Impl<T extends object, P extends ObjectResult<T> | Partial<ObjectResult<T>>> extends Codec<P> {
         constructor(
             readonly name: string,
             readonly schema: ObjectSchema<T>,
@@ -37,15 +42,15 @@ export namespace ObjectCodecImpl {
                 }
             }
 
-            return target as P;
+            return target as unknown as P;
         }
 
         $encode(val: P): unknown {
             const target = { } as Record<keyof T, unknown>;
 
             for (const [propertyName, propertyCodec] of this.properties) {
-                if (!this.isPartial || val[propertyName] !== undefined) {
-                    target[propertyName] = propertyCodec.$encode(val[propertyName]);
+                if (!this.isPartial || val[propertyName as never] !== undefined) {
+                    target[propertyName] = propertyCodec.$encode(val[propertyName as never]);
                 }
             }
 
@@ -53,7 +58,7 @@ export namespace ObjectCodecImpl {
         }
     }
 
-    export class ObjectCodec<T extends object> extends Impl<T, T> {
+    export class ObjectCodec<T extends object> extends Impl<T, ObjectResult<T>> {
         constructor(
             name: string,
             schema: ObjectSchema<T>,
@@ -73,7 +78,7 @@ export namespace ObjectCodecImpl {
         }
     }
 
-    export class PartialObjectCodec<T extends object> extends Impl<T, Partial<T>> {
+    export class PartialObjectCodec<T extends object> extends Impl<T, Partial<ObjectResult<T>>> {
         constructor(
             name: string,
             schema: ObjectSchema<T>,

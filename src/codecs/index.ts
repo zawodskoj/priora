@@ -104,7 +104,7 @@ export namespace Codecs {
     }
 
     export function recursive<T extends object>(typename: string) {
-        return <C extends ObjectSchema<T>>(mkCodec: (knot: Codec<T>) => C): Codec<T> => {
+        return <C extends ObjectSchema<T>>(mkCodec: (knot: RecursiveCodecImpl.RecurCodec<T>) => C): RecursiveCodecImpl.RecurCodec<T> => {
             return RecursiveCodecImpl.create<T, C>(typename, mkCodec);
         }
     }

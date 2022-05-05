@@ -35,6 +35,12 @@ export abstract class Codec<T> {
         return this.$decode(JSON.parse(json), runCtx);
     }
 
+    /** @deprecated use parseStrict */
+    decodeStrict: (obj: unknown) => T = obj => {
+        return this.parseInFreshContext(JSON.stringify(obj), { bestEffort: false });
+    };
+
+
     parseStrict: (json: string) => T = json => {
         return this.parseInFreshContext(json, { bestEffort: false });
     };

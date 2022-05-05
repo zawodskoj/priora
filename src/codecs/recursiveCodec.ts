@@ -1,24 +1,28 @@
-import { Codec } from "../codec";
+import { Codec, CodecType } from "../codec";
 import { DecodingContext } from "../context";
 import { ObjectCodecImpl } from "./objectCodec";
 
 export namespace RecursiveCodecImpl {
-    export function create<T extends object, C extends ObjectCodecImpl.ObjectSchema<T>>(typename: string, mkCodec: (_: Codec<T>) => C): Codec<T> {
-        let knot: Codec<T>;
-        let instance: Codec<T> | undefined;
+    export type RecurCodec<T extends object> = Codec<CodecType<ObjectCodecImpl.ObjectCodec<T>>>;
 
-        function getInstance(): Codec<T> {
+    export function create<T extends object, C extends ObjectCodecImpl.ObjectSchema<T>>(typename: string, mkCodec: (_: RecurCodec<T>) => C): RecurCodec<T> {
+        type Result = CodecType<RecurCodec<T>>;
+
+        let knot: RecurCodec<T>;
+        let instance: ObjectCodecImpl.ObjectCodec<T> | undefined;
+
+        function getInstance(): ObjectCodecImpl.ObjectCodec<T> {
             if (instance) return instance;
             if (!knot) throw new Error("Try again");
 
-            return instance = ObjectCodecImpl.create(typename, mkCodec(knot), true) as Codec<T>;
+            return instance = ObjectCodecImpl.create(typename, mkCodec(knot), true);
         }
 
-        function decode(val: unknown, ctx: DecodingContext): T {
+        function decode(val: unknown, ctx: DecodingContext): Result {
             return getInstance().$decode(val, ctx);
         }
 
-        function encode(val: T): unknown {
+        function encode(val: Result): unknown {
             return getInstance().$encode(val);
         }
 

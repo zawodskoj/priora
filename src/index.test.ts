@@ -22,19 +22,19 @@ function primitiveCodec(codec: Codec<any>, goodValues: unknown[], badValues: unk
 primitiveCodec(
     C.string,
     ["", "123"],
-    [123, { foo: "bar" }, false, new Date()]
+    [123, { foo: "bar" }, false]
 );
 
 primitiveCodec(
     C.number,
     [0, 123],
-    ["123", { foo: "bar" }, false, new Date()]
+    ["123", { foo: "bar" }, false]
 );
 
 primitiveCodec(
     C.boolean,
     [true, false],
-    [0, 123, "123", { foo: "bar" }, new Date()]
+    [0, 123, "123", { foo: "bar" }]
 );
 
 /*
