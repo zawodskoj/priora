@@ -23,7 +23,7 @@ export type CasesSchema<
     [key in H]: ObjectSchema<S[key]>
 }
 
-type PickCase<C, K extends string> =
+export type PickCase<C, K extends string> =
     C extends ClosedCasesCodec<infer D, infer B, infer S, infer H>
         ? [K] extends [H]
             ? { [key in K]: ObjectResult<B & S[key]> & { [_ in D]: key } }[K]
