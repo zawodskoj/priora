@@ -12,7 +12,7 @@ export type CasesCodecResult<
     S extends Record<H, object>,
     H extends string
 > = {
-    [key in H]: ObjectResult<B & S[key] & { [_ in D]: key }>
+    [key in H]: ObjectResult<B & S[key]> & { [_ in D]: key }
 }[H]
 
 export type CasesSchema<
@@ -25,11 +25,11 @@ export type CasesSchema<
 export type PickCase<C, K extends string> =
     C extends ClosedCasesCodec<infer D, infer B, infer S, infer H>
         ? [K] extends [H]
-            ? ObjectResult<B & { [key in K]: S[key] & { [_ in D]: key } }[K]>
+            ? ObjectResult<B> & { [key in K]: ObjectResult<S[key]> & { [_ in D]: key } }[K]
             : never
         : C extends CasesCodec<infer D, infer B, infer S, infer CH, infer OH>
             ? [K] extends [OH]
-                ? ObjectResult<B & { [key in K]: S[key] & { [_ in D]: key } }[K]>
+                ? ObjectResult<B> & { [key in K]: ObjectResult<S[key]> & { [_ in D]: key } }[K]
                 : never
             : never
 
