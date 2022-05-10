@@ -5,8 +5,6 @@ import { Codecs } from "./index";
 import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 import ObjectResult = ObjectCodecImpl.ObjectResult;
-import Expand = ObjectCodecImpl.Expand;
-import ObjectResultNex = ObjectCodecImpl.ObjectResultNex;
 
 export type CasesCodecResult<
     D extends string,
@@ -22,10 +20,6 @@ export type CasesSchema<
     H extends string
 > = {
     [key in H]: ObjectSchema<S[key]>
-}
-
-type CObj<S> = {
-    [key in keyof S]: ObjectResult<S[key]>
 }
 
 export type PickCase<C, K extends string> =

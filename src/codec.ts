@@ -3,7 +3,11 @@ import {DecodingException, Result} from "./errors";
 
 export function identity<T>(x: T): T { return x; }
 
-export type CodecType<T extends Codec<any>> = T extends Codec<infer C> ? C : never;
+declare const _optional: unique symbol;
+
+export type OptionalTypeMarker = typeof _optional;
+export type CodecType<T extends Codec<any>> =
+    T extends Codec<infer C> ? OptionalTypeMarker extends C ? Exclude<C, OptionalTypeMarker> | undefined : C : never;
 
 /** @deprecated use CodecType */
 export type UnwrapCodec<T extends Codec<any>> = CodecType<T>;
@@ -69,21 +73,25 @@ export abstract class Codec<T> {
         return new CodecProjection(rename ?? this.name, this, decode, identity);
     }
 
-    get optional(): Codec<T | undefined> {
+    get opt(): Codec<T | OptionalTypeMarker> {
         return new OptionalCodec(this.name + " | nothing", this, undefined, null)
-            .imap<T | undefined>(x => x ?? undefined, x => x, undefined);
+            .imap<T | undefined>(x => x ?? undefined, x => x, undefined) as never;
     }
 
-    get optionalStrict(): Codec<T | undefined | null> {
-        return new OptionalCodec(this.name + " | undefined | null", this, undefined, null);
+    get optional(): Codec<T | OptionalTypeMarker> {
+        return this.opt;
     }
 
-    get transient(): Codec<T | undefined> {
+    get orUndefined(): Codec<T | undefined> {
         return new OptionalCodec(this.name + " | undefined", this, undefined, undefined);
     }
 
-    get nullable(): Codec<T | null> {
+    get orNull(): Codec<T | null> {
         return new OptionalCodec(this.name + " | null", this, null, null);
+    }
+
+    get orNullOrUndefined(): Codec<T | undefined | null> {
+        return new OptionalCodec(this.name + " | undefined | null", this, undefined, null);
     }
 
     static make<T>(name: string, decode: (v: unknown, ctx: DecodingContext) => T, encode: (v: T) => unknown, suppressContext: boolean = false): Codec<T> {

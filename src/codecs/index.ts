@@ -8,6 +8,7 @@ import { KeyCodec } from "../keyCodec";
 
 export namespace Codecs {
     import TupleCodecs = ArrayCodecImpl.TupleCodecs;
+    import RefillOpts = RecursiveCodecImpl.RefillOpts;
 
     interface PrimitiveHelperMap {
         number: number
@@ -26,7 +27,7 @@ export namespace Codecs {
         )
     }
 
-    function singleton<T extends string | number | boolean | null | undefined>(singleton: T): Codec<T> {
+    export function singleton<T extends string | number | boolean | null | undefined>(singleton: T): Codec<T> {
         return Codec.make<T>(
             `singleton(${singleton})`,
             (val, ctx) => {
@@ -40,10 +41,6 @@ export namespace Codecs {
     export const number = primitive("number");
     export const string = primitive("string");
     export const boolean = primitive("boolean");
-
-    export const $null = singleton(null);
-    export const $true = singleton(true);
-    export const $false = singleton(false);
 
     export function literals<L extends string, Ts extends [L, ...L[]]>(name: string, ts: Ts): Codec<Ts[number]> {
         return Codec.make<Ts[number]>(
@@ -104,8 +101,10 @@ export namespace Codecs {
     }
 
     export function recursive<T extends object>(typename: string) {
-        return <C extends ObjectSchema<T>>(mkCodec: (knot: RecursiveCodecImpl.RecurCodec<T>) => C): RecursiveCodecImpl.RecurCodec<T> => {
-            return RecursiveCodecImpl.create<T, C>(typename, mkCodec);
+        type RT = RefillOpts<T>;
+
+        return <C extends ObjectSchema<RT>>(mkCodec: (knot: RecursiveCodecImpl.RecurCodec<RT>) => C): RecursiveCodecImpl.RecurCodec<RT> => {
+            return RecursiveCodecImpl.create<RT, C>(typename, mkCodec);
         }
     }
 

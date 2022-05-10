@@ -1,14 +1,14 @@
-import { Codec } from "../codec";
+import { Codec, OptionalTypeMarker } from "../codec";
 import { DecodingContext } from "../context";
 
 export namespace ObjectCodecImpl {
     export type ObjectSchema<T = any> = { [key in keyof T]: Codec<T[key]> }
 
     export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
-    type OptKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? key : never }[keyof T];
-    type ReqKeys<T> = { [key in keyof T]: [undefined] extends [T[key]] ? never : key }[keyof T];
-    export type ObjectResult<T> = Expand<Pick<T, ReqKeys<T>> & Partial<Pick<T, OptKeys<T>>>>
-    export type ObjectResultNex<T> = Pick<T, ReqKeys<T>> & Partial<Pick<T, OptKeys<T>>>
+    type OptKeys<T> = { [key in keyof T]: OptionalTypeMarker extends T[key] ? key : never }[keyof T];
+    type ReqKeys<T> = { [key in keyof T]: OptionalTypeMarker extends T[key] ? never : key }[keyof T];
+    type FixOptKeys<T> = { [key in keyof T]: OptionalTypeMarker extends T[key] ? Exclude<T[key], OptionalTypeMarker> : T };
+    export type ObjectResult<T> = Expand<Pick<T, ReqKeys<T>> & Partial<FixOptKeys<Pick<T, OptKeys<T>>>>>
 
     class Impl<T extends object, P extends ObjectResult<T> | Partial<ObjectResult<T>>> extends Codec<P> {
         constructor(

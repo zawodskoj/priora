@@ -1,5 +1,7 @@
 import { Codecs as C } from "./codecs";
 import { Codec, CodecType } from "./codec";
+import { RecursiveCodecImpl } from "./codecs/recursiveCodec";
+import RefillOpts = RecursiveCodecImpl.RefillOpts;
 
 export {};
 
@@ -40,20 +42,23 @@ primitiveCodec(
 test("optionals", () => {
     const codec = C.object("test", {
         foo: C.string,
-        bar: C.string.nullable,
-        baz: C.string.optional
+        bar: C.string.orNull,
+        baz: C.string.opt,
+        qux: C.string.orUndefined
     });
 
     type CType = CodecType<typeof codec>;
     const a: CType = {
         foo: "",
         bar: null,
-        baz: ""
+        baz: "",
+        qux: undefined
     }
 
     const b: CType = {
         foo: "",
-        bar: null
+        bar: null,
+        qux: ""
     }
 
     const realA: { foo: string, bar: string | null, baz?: string | undefined } = a;
@@ -65,12 +70,16 @@ test("recursives and optionals", () => {
         foo: string
         bar?: string
         baz?: RecType[]
+        qux: string | undefined
     }
+
+    type A = RefillOpts<RecType>
 
     const codec = C.recursive<RecType>("test")(self => ({
         foo: C.string,
         bar: C.string.optional,
-        baz: C.array(self).optional
+        baz: C.array(self).optional,
+        qux: C.string.orUndefined,
     }));
 })
 
