@@ -1,7 +1,7 @@
 import { DecodingException } from "./errors";
 import { Codec, ErrorHandlingOptions, TracingMode } from "./codec";
 
-class TranscodingContext {
+export class TranscodingContext {
     isTracingEnabled: boolean = false;
 
     scope: string[] = []
