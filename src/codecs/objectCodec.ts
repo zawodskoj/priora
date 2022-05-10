@@ -1,5 +1,6 @@
 import { Codec, ReportUnknownProperties, OptionalCodec } from "../codec";
 import { DecodingContext, EncodingContext } from "../context";
+import { enter } from "../contextual.stub";
 
 export namespace ObjectCodecImpl {
     export type ObjectSchema<T = any> = {
@@ -32,22 +33,24 @@ export namespace ObjectCodecImpl {
             const coercedVal = val as Record<keyof T, unknown>;
             const target = { } as T;
 
-            const decodeSingleField = (propertyName: string & keyof T, propertyCodec: Codec<T[keyof T]>) => {
-                const propVal = coercedVal[propertyName];
+            const decodeSingleField =
+                this.suppressContext || !ctx.isTracingEnabled
+                    ? (propertyName: string & keyof T, propertyCodec: Codec<T[keyof T]>) => {
+                        const propVal = coercedVal[propertyName];
 
-                if (!this.isPartial || propVal !== undefined) {
-                    if (this.suppressContext || !ctx.isTracingEnabled) {
-                        target[propertyName] = propertyCodec.$decode(propVal, ctx) as T[typeof propertyName];
-                    } else {
-                        ctx.unsafeEnter(this.name + "." + propertyName, propertyName);
-                        try {
+                        if (!this.isPartial || propVal !== undefined) {
                             target[propertyName] = propertyCodec.$decode(propVal, ctx) as T[typeof propertyName];
-                        } finally {
-                            ctx.unsafeLeave();
                         }
                     }
-                }
-            };
+                    : (propertyName: string & keyof T, propertyCodec: Codec<T[keyof T]>) => {
+                        const propVal = coercedVal[propertyName];
+
+                        if (!this.isPartial || propVal !== undefined) {
+                            enter(ctx, this.name + "." + propertyName, propertyName, () => {
+                                target[propertyName] = propertyCodec.$decode(propVal, ctx) as T[typeof propertyName];
+                            });
+                        }
+                    }
 
             if (ctx.errorHandlingOptions.reportUnknownProperties & ReportUnknownProperties.ON_DECODE) {
                 for (const propertyName in coercedVal) {
@@ -81,22 +84,24 @@ export namespace ObjectCodecImpl {
         $encode(val: P, ctx: EncodingContext): unknown {
             const target = { } as Record<keyof T, unknown>;
 
-            const encodeSingleField = (propertyName: string & keyof T, propertyCodec: Codec<unknown>) => {
-                const propVal = val[propertyName as never];
+            const encodeSingleField =
+                this.suppressContext || !ctx.isTracingEnabled
+                    ? (propertyName: string & keyof T, propertyCodec: Codec<unknown>) => {
+                        const propVal = val[propertyName as never];
 
-                if (!this.isPartial || propVal !== undefined) {
-                    if (this.suppressContext || !ctx.isTracingEnabled) {
-                        target[propertyName] = propertyCodec.$encode(propVal, ctx);
-                    } else {
-                        ctx.unsafeEnter(this.name + "." + propertyName, propertyName);
-                        try {
+                        if (!this.isPartial || propVal !== undefined) {
                             target[propertyName] = propertyCodec.$encode(propVal, ctx);
-                        } finally {
-                            ctx.unsafeLeave();
                         }
                     }
-                }
-            };
+                    : (propertyName: string & keyof T, propertyCodec: Codec<unknown>) => {
+                        const propVal = val[propertyName as never];
+
+                        if (!this.isPartial || propVal !== undefined) {
+                            enter(ctx, this.name + "." + propertyName, propertyName, () => {
+                                target[propertyName] = propertyCodec.$encode(propVal, ctx);
+                            });
+                        }
+                    };
 
             if (ctx.errorHandlingOptions.reportUnknownProperties & ReportUnknownProperties.ON_DECODE) {
                 for (const propertyName in val) {

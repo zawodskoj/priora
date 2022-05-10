@@ -108,7 +108,7 @@ export namespace Codecs {
     export function record<T>(codec: Codec<T>): Codec<Record<string, T>>
     export function record<T, L extends string>(codec: Codec<T>, keyCodec: KeyCodec<L>): Codec<Record<L, T>>
     export function record<T, L extends string>(codec: Codec<T>, keyCodec?: KeyCodec<L>): Codec<Record<L, T>> {
-        return RecordCodecImpl.create(codec, keyCodec, false);
+        return RecordCodecImpl.create(codec, keyCodec);
     }
 
     export function map<T>(codec: Codec<T>): Codec<Map<string, T>>

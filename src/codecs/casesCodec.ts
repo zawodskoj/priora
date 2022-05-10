@@ -6,6 +6,7 @@ import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 import ObjectResult = ObjectCodecImpl.ObjectResult;
 import ObjectCodecFromSchema = ObjectCodecImpl.ObjectCodecFromSchema;
+import { surround } from "../contextual.stub";
 
 export type CasesCodecResult<
     D extends string,
@@ -93,26 +94,15 @@ export class ClosedCasesCodec<
             [this.discriminator]: discriminator
         };
 
-        if (ctx.isTracingEnabled) {
-            try {
-                ctx.unsafeEnter(this.name + "#" + discriminator, undefined);
-
+        surround(ctx, (enter) => {
+            enter(this.name + "#" + discriminator, () => {
                 for (const [propertyName, propertyCodec] of caseProperties) {
-                    ctx.unsafeEnter(this.name + "#" + discriminator + "." + propertyName, propertyName);
-                    try {
+                    enter(this.name + "#" + discriminator + "." + propertyName, propertyName, () => {
                         target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as never;
-                    } finally {
-                        ctx.unsafeLeave();
-                    }
+                    });
                 }
-            } finally {
-                ctx.unsafeLeave();
-            }
-        } else {
-            for (const [propertyName, propertyCodec] of caseProperties) {
-                target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as never;
-            }
-        }
+            })
+        });
 
         return target as never;
     }
@@ -128,20 +118,15 @@ export class ClosedCasesCodec<
             [this.discriminator]: discriminator
         } as Record<string, unknown>;
 
-        if (ctx.isTracingEnabled) {
-            for (const [propertyName, propertyCodec] of caseProperties) {
-                ctx.unsafeEnter(this.name + "#" + discriminator + "." + propertyName, propertyName);
-                try {
-                    target[propertyName] = propertyCodec.$encode(val[propertyName as never], ctx);
-                } finally {
-                    ctx.unsafeLeave();
+        surround(ctx, (enter) => {
+            enter(this.name + "#" + discriminator, () => {
+                for (const [propertyName, propertyCodec] of caseProperties) {
+                    enter(this.name + "#" + discriminator + "." + propertyName, propertyName, () => {
+                        target[propertyName] = propertyCodec.$encode(val[propertyName as never], ctx);
+                    });
                 }
-            }
-        } else {
-            for (const [propertyName, propertyCodec] of caseProperties) {
-                target[propertyName] = propertyCodec.$encode(val[propertyName as never], ctx);
-            }
-        }
+            })
+        });
 
         return target;
     }
