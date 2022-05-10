@@ -77,12 +77,20 @@ export abstract class Codec<T> {
         return this.opt;
     }
 
+    orElse(value: T, isDefault?: (val: unknown) => boolean): Codec<T> {
+        return new OrElseCodec(this.name + " or default", this, () => value, isDefault);
+    }
+
+    orElseLazy(lazy: () => T, isDefault?: (val: unknown) => boolean): Codec<T> {
+        return new OrElseCodec(this.name + " or default", this, lazy, isDefault);
+    }
+
     get orUndefined(): Codec<T | undefined> {
-        return new DefValuesCodec(this.name + " | undefined", this, undefined, undefined);
+        return new OptValuesCodec(this.name + " | undefined", this, undefined, undefined);
     }
 
     get orNull(): Codec<T | null> {
-        return new DefValuesCodec(this.name + " | null", this, null, null);
+        return new OptValuesCodec(this.name + " | null", this, null, null);
     }
 
     /** @deprecated use orNull */
@@ -91,7 +99,7 @@ export abstract class Codec<T> {
     }
 
     get orNullOrUndefined(): Codec<T | undefined | null> {
-        return new DefValuesCodec(this.name + " | undefined | null", this, undefined, null);
+        return new OptValuesCodec(this.name + " | undefined | null", this, undefined, null);
     }
 
     static make<T>(name: string, decode: (v: unknown, ctx: DecodingContext) => T, encode: (v: T) => unknown, suppressContext: boolean = false): Codec<T> {
@@ -99,7 +107,7 @@ export abstract class Codec<T> {
     }
 }
 
-class DefValuesCodec<T, O extends undefined | null> extends Codec<T | O> {
+class OptValuesCodec<T, O extends undefined | null> extends Codec<T | O> {
     constructor(
         readonly name: string,
         private readonly base: Codec<T>,
@@ -121,6 +129,34 @@ class DefValuesCodec<T, O extends undefined | null> extends Codec<T | O> {
     $encode(value: T | O): unknown {
         if (value === this.o1 || value === this.o2) return value;
 
+        return this.base.$encode(value as T);
+    }
+}
+
+class OrElseCodec<T> extends Codec<T> {
+    private static defaultIsDefault(val: unknown) {
+        return val === undefined || val === null;
+    }
+
+    constructor(
+        readonly name: string,
+        private readonly base: Codec<T>,
+        private readonly lazy: () => T,
+        private readonly isDefault: ((val: unknown) => boolean) = OrElseCodec.defaultIsDefault
+    ) { super(); }
+
+    $decode(value: unknown, ctx: DecodingContext): T {
+        ctx.unsafeEnter(this.name, undefined);
+        try {
+            if (this.isDefault(value)) return this.lazy();
+
+            return this.base.$decode(value, ctx);
+        } finally {
+            ctx.unsafeLeave();
+        }
+    }
+
+    $encode(value: T): unknown {
         return this.base.$encode(value as T);
     }
 }
