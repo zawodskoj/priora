@@ -2,7 +2,7 @@
   "name": "priora",
   "author": "zawodskoj",
   "license": "MIT",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Sugar-free json re-parser",
   "main": "dist/index.js",
   "module": "dist/index.js",
