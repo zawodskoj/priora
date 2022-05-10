@@ -17,7 +17,7 @@ export namespace ObjectCodecImpl {
     class Impl<T extends object, S extends ObjectSchema<T>, P extends ObjectResult<S> | Partial<ObjectResult<S>>> extends Codec<P> {
         constructor(
             readonly name: string,
-            readonly schema: ObjectSchema<T>,
+            readonly schema: S,
             private readonly properties: [keyof T & string, Codec<unknown>][],
             private readonly isPartial: boolean,
             protected readonly suppressContext: boolean
@@ -69,7 +69,7 @@ export namespace ObjectCodecImpl {
     export class ObjectCodec<T extends object, S extends ObjectSchema<T>> extends Impl<T, S, ObjectResult<S>> {
         constructor(
             name: string,
-            schema: ObjectSchema<T>,
+            schema: S,
             suppressContext: boolean
         ) {
             super(
@@ -89,7 +89,7 @@ export namespace ObjectCodecImpl {
     export class PartialObjectCodec<T extends object, S extends ObjectSchema<T>> extends Impl<T, S, Partial<ObjectResult<S>>> {
         constructor(
             name: string,
-            schema: ObjectSchema<T>,
+            schema: S,
             suppressContext: boolean
         ) {
             super(
