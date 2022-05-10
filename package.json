@@ -4,6 +4,7 @@
   "license": "MIT",
   "version": "1.2.10",
   "description": "Sugar-free json re-parser",
+  "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "typings": "dist/index.d.ts",
