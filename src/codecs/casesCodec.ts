@@ -199,7 +199,7 @@ export class CasesCodec<
         return this.similar<C, {}, {}>(caseNames, { });
     }
 
-    close(): [CH] extends [OH] ? ClosedCasesCodec<D, BS, SS, CH> : never {
+    close(): [CH] extends [OH] ? ClosedCasesCodec<D, BS, SS, CH> : ["Error - unclosed cases:", Exclude<CH, OH>] {
         return new ClosedCasesCodec<D, BS, never, CH>(
             this.name,
             this.discriminator,
