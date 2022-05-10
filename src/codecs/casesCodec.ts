@@ -7,6 +7,7 @@ import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 import ObjectResult = ObjectCodecImpl.ObjectResult;
 import ObjectCodecFromSchema = ObjectCodecImpl.ObjectCodecFromSchema;
 import { surround } from "../contextual.stub";
+import Expand = ObjectCodecImpl.Expand;
 
 export type CasesCodecResult<
     D extends string,
@@ -14,7 +15,7 @@ export type CasesCodecResult<
     S extends Record<H, object>,
     H extends string
 > = {
-    [key in H]: ObjectResult<B & S[key]> & { [_ in D]: key }
+    [key in H]: Expand<{ [_ in D]: key } & ObjectResult<B & S[key]>>
 }[H]
 
 export type CasesSchema<
@@ -27,11 +28,11 @@ export type CasesSchema<
 export type PickCase<C, K extends string> =
     C extends ClosedCasesCodec<infer D, infer BS, infer SS, infer H>
         ? K extends H
-            ? { [key in K]: ObjectResult<BS & SS[key]> & { [_ in D]: key } }[K]
+            ? { [key in K]: { [_ in D]: key } & ObjectResult<BS & SS[key]> }[K]
             : never
         : C extends CasesCodec<infer D, infer BS, infer SS, infer CH, infer OH>
             ? K extends OH
-                ? { [key in K]: ObjectResult<BS & SS[key]> & { [_ in D]: key } }[K]
+                ? { [key in K]: { [_ in D]: key } & ObjectResult<BS & SS[key]> }[K]
                 : never
             : never
 
