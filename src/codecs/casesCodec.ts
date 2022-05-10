@@ -1,4 +1,4 @@
-import { Codec } from "../codec";
+import { Codec, CodecType } from "../codec";
 import { ObjectCodecImpl } from "./objectCodec";
 import { DecodingContext, EncodingContext } from "../context";
 import { Codecs } from "./index";
@@ -11,11 +11,11 @@ import Expand = ObjectCodecImpl.Expand;
 
 export type CasesCodecResult<
     D extends string,
-    B extends object,
-    S extends Record<H, object>,
+    BS extends ObjectSchema,
+    SS extends Record<H, ObjectSchema>,
     H extends string
 > = {
-    [key in H]: Expand<{ [_ in D]: key } & ObjectResult<B & S[key]>>
+    [key in H]: Expand<{ [_ in D]: key } & ObjectResult<BS & SS[key]>>
 }[H]
 
 export type CasesSchema<
@@ -25,16 +25,19 @@ export type CasesSchema<
     [key in H]: S[key]
 }
 
+type AnyCasesCodec<
+    D extends string,
+    BS extends ObjectSchema,
+    SS extends Record<H, ObjectSchema>,
+    H extends string
+> = ClosedCasesCodec<D, BS, SS, H> | CasesCodec<D, BS, SS, any, H>
+
 export type PickCase<C, K extends string> =
-    C extends ClosedCasesCodec<infer D, infer BS, infer SS, infer H>
+    C extends AnyCasesCodec<infer D, infer BS, infer SS, infer H>
         ? K extends H
-            ? { [key in K]: { [_ in D]: key } & ObjectResult<BS & SS[key]> }[K]
+            ? { [key in K]: Expand<{ [_ in D]: key } & ObjectResult<BS & SS[key]>> }[K]
             : never
-        : C extends CasesCodec<infer D, infer BS, infer SS, infer CH, infer OH>
-            ? K extends OH
-                ? { [key in K]: { [_ in D]: key } & ObjectResult<BS & SS[key]> }[K]
-                : never
-            : never
+        : never
 
 export class ClosedCasesCodec<
     D extends string,

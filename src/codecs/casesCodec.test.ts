@@ -68,10 +68,23 @@ describe("CasesCodec2 tests", function () {
 
         type Codec2<T extends "foo" | "bar" | "baz"> = Codecs.PickCase<typeof codec2, T>;
 
+        function nonGeneric() {
+            const p = null as never as Codec2<"foo" | "bar">;
+            const a: string | number = p.shared;
+
+            if (p.type === "bar") {
+                p
+            }
+        }
+
         function generic<T extends "foo" | "bar">() {
             const p = null as never as Codec2<T>;
 
             const a: string | number = p.shared;
+
+            if (p.type === "bar") {
+                p
+            }
         }
     })
 
@@ -83,7 +96,7 @@ describe("CasesCodec2 tests", function () {
         const badCodec = codecBase.close();
         const goodCodec = codecBase.empty("bar").close();
 
-        const badTcheck: typeof badCodec extends never ? true : false = true;
+        const badTcheck: typeof badCodec extends ["Error - unclosed cases:", "bar"] ? true : false = true;
         const goodTcheck: typeof goodCodec extends never ? true : false = false;
 
         expect(badTcheck).toBe(true);
