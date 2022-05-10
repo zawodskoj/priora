@@ -1,7 +1,6 @@
 import { Codecs as C } from "./codecs";
 import { Codec, CodecType } from "./codec";
 import { RecursiveCodecImpl } from "./codecs/recursiveCodec";
-import RefillOpts = RecursiveCodecImpl.RefillOpts;
 
 export {};
 
@@ -72,8 +71,6 @@ test("recursives and optionals", () => {
         baz?: RecType[]
         qux: string | undefined
     }
-
-    type A = RefillOpts<RecType>
 
     const codec = C.recursive<RecType>("test")(self => ({
         foo: C.string,

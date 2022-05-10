@@ -5,6 +5,7 @@ import { Codecs } from "./index";
 import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 import ObjectResult = ObjectCodecImpl.ObjectResult;
+import ObjectCodecFromSchema = ObjectCodecImpl.ObjectCodecFromSchema;
 
 export type CasesCodecResult<
     D extends string,
@@ -16,36 +17,36 @@ export type CasesCodecResult<
 }[H]
 
 export type CasesSchema<
-    S extends Record<H, object>,
+    S extends Record<H, ObjectSchema>,
     H extends string
 > = {
-    [key in H]: ObjectSchema<S[key]>
+    [key in H]: S[key]
 }
 
 export type PickCase<C, K extends string> =
-    C extends ClosedCasesCodec<infer D, infer B, infer S, infer H>
+    C extends ClosedCasesCodec<infer D, infer BS, infer SS, infer H>
         ? K extends H
-            ? { [key in K]: ObjectResult<B & S[key]> & { [_ in D]: key } }[K]
+            ? { [key in K]: ObjectResult<BS & SS[key]> & { [_ in D]: key } }[K]
             : never
-        : C extends CasesCodec<infer D, infer B, infer S, infer CH, infer OH>
+        : C extends CasesCodec<infer D, infer BS, infer SS, infer CH, infer OH>
             ? K extends OH
-                ? { [key in K]: ObjectResult<B & S[key]> & { [_ in D]: key } }[K]
+                ? { [key in K]: ObjectResult<BS & SS[key]> & { [_ in D]: key } }[K]
                 : never
             : never
 
 export class ClosedCasesCodec<
     D extends string,
-    B extends object,
-    S extends Record<H, object>,
+    BS extends ObjectSchema,
+    SS extends Record<H, ObjectSchema>,
     H extends string
-> extends Codec<CasesCodecResult<D, B, S, H>> {
+> extends Codec<CasesCodecResult<D, BS, SS, H>> {
     private casesMap: Record<string, [string, Codec<unknown>][]>
 
     constructor (
         readonly name: string,
         readonly discriminator: D,
-        readonly baseSchema: ObjectSchema<B>,
-        readonly casesSchema: CasesSchema<S, H>
+        readonly baseSchema: BS,
+        readonly casesSchema: CasesSchema<SS, H>
     ) {
         super();
 
@@ -58,8 +59,8 @@ export class ClosedCasesCodec<
         this.casesMap = casesMap;
     }
 
-    open(): CasesCodec<D, B, S, H, H> {
-        return new CasesCodec<D, B, S, H, H>(
+    open(): CasesCodec<D, BS, SS, H, H> {
+        return new CasesCodec<D, BS, SS, H, H>(
             this.name,
             this.discriminator,
             this.baseSchema,
@@ -67,7 +68,7 @@ export class ClosedCasesCodec<
         )
     }
 
-    $decode(val: unknown, ctx: DecodingContext): CasesCodecResult<D, B, S, H> {
+    $decode(val: unknown, ctx: DecodingContext): CasesCodecResult<D, BS, SS, H> {
         if (typeof val !== "object" || val === null) return ctx.failure("Failed to decode cases - object expected", val);
 
         const coercedVal = val as Record<string, unknown>;
@@ -109,7 +110,7 @@ export class ClosedCasesCodec<
         }
     }
 
-    $encode(val: CasesCodecResult<D, B, S, H>): unknown {
+    $encode(val: CasesCodecResult<D, BS, SS, H>): unknown {
         const caseProperties = this.casesMap[val[this.discriminator as never]];
         if (!caseProperties) throw new Error(); // TODO error message
 
@@ -124,19 +125,19 @@ export class ClosedCasesCodec<
         return target;
     }
 
-    pick<C extends H>(caseName: C): ObjectCodec<B & S[C] & { [_ in D]: C }> {
+    pick<C extends H>(caseName: C): ObjectCodecFromSchema<BS & SS[C] & { [_ in D]: Codec<C> }> {
         return ObjectCodecImpl.create(this.name + "#" + caseName, {
             ...this.baseSchema,
             [this.discriminator]: Codecs.literals(caseName, [caseName]),
             ...this.casesSchema[caseName]
-        } as never);
+        } as never) as never;
     }
 }
 
 export class CasesCodec<
     D extends string,
-    B extends object,
-    S extends Record<OH, object>,
+    BS extends ObjectSchema,
+    SS extends Record<OH, ObjectSchema>,
     CH extends string,
     OH extends CH
 > {
@@ -151,11 +152,11 @@ export class CasesCodec<
     constructor (
         readonly name: string,
         readonly discriminator: D,
-        readonly baseSchema: ObjectSchema<B>,
-        readonly casesSchema: CasesSchema<S, OH>
+        readonly baseSchema: BS,
+        readonly casesSchema: CasesSchema<SS, OH>
     ) {}
 
-    base<B2 extends object>(baseSchema: ObjectSchema<B2>): CasesCodec<D, B2, S, CH, OH> {
+    base<B2 extends object, BS2 extends ObjectSchema<B2>>(baseSchema: BS2): CasesCodec<D, BS2, SS, CH, OH> {
         return new CasesCodec(
             this.name,
             this.discriminator,
@@ -164,11 +165,11 @@ export class CasesCodec<
         )
     }
 
-    similar<C extends Exclude<CH, OH>, O extends object>(
+    similar<C extends Exclude<CH, OH>, O extends object, OS extends ObjectSchema<O>>(
         caseNames: C[],
-        caseSchema: ObjectSchema<O>
-    ): CasesCodec<D, B, S & { [_ in C]: O }, CH, OH | C> {
-        const newSchema = { ...this.casesSchema } as S & { [_ in C]: O };
+        caseSchema: OS
+    ): CasesCodec<D, BS, SS & { [_ in C]: OS }, CH, OH | C> {
+        const newSchema = { ...this.casesSchema } as SS & { [_ in C]: OS };
 
         for (const caseName of caseNames)
             newSchema[caseName] = caseSchema as never;
@@ -181,19 +182,19 @@ export class CasesCodec<
         )
     }
 
-    single<C extends Exclude<CH, OH>, O extends object>(
+    single<C extends Exclude<CH, OH>, O extends object, OS extends ObjectSchema<O>>(
         caseName: C,
-        caseSchema: ObjectSchema<O>
-    ): CasesCodec<D, B, S & { [_ in C]: O }, CH, OH | C> {
-        return this.similar<C, O>([caseName], caseSchema);
+        caseSchema: OS
+    ): CasesCodec<D, BS, SS & { [_ in C]: OS }, CH, OH | C> {
+        return this.similar<C, O, OS>([caseName], caseSchema);
     }
 
-    empty<C extends Exclude<CH, OH>>(...caseNames: C[]): CasesCodec<D, B, S & { [_ in C]: {} }, CH, OH | C> {
-        return this.similar<C, {}>(caseNames, { });
+    empty<C extends Exclude<CH, OH>>(...caseNames: C[]): CasesCodec<D, BS, SS & { [_ in C]: {} }, CH, OH | C> {
+        return this.similar<C, {}, {}>(caseNames, { });
     }
 
-    close(): [CH] extends [OH] ? ClosedCasesCodec<D, B, S, CH> : never {
-        return new ClosedCasesCodec<D, B, never, CH>(
+    close(): [CH] extends [OH] ? ClosedCasesCodec<D, BS, SS, CH> : never {
+        return new ClosedCasesCodec<D, BS, never, CH>(
             this.name,
             this.discriminator,
             this.baseSchema,
@@ -201,7 +202,7 @@ export class CasesCodec<
         ) as never;
     }
 
-    drop<C extends CH>(caseName: C): CasesCodec<D, B, Omit<S, C>, CH, Exclude<OH, C>> {
+    drop<C extends CH>(caseName: C): CasesCodec<D, BS, Omit<SS, C>, CH, Exclude<OH, C>> {
         const newSchema = { ...this.casesSchema };
         delete newSchema[caseName as never];
 
@@ -213,15 +214,15 @@ export class CasesCodec<
         )
     }
 
-    narrow<C extends Exclude<CH, OH>>(_caseName: C): CasesCodec<D, B, S, Exclude<CH, C>, Exclude<OH, C>> {
+    narrow<C extends Exclude<CH, OH>>(_caseName: C): CasesCodec<D, BS, SS, Exclude<CH, C>, Exclude<OH, C>> {
         return this as never;
     }
 
-    dropAndNarrow<C extends CH>(caseName: C): CasesCodec<D, B, Omit<S, C>, Exclude<CH, C>, Exclude<OH, C>> {
+    dropAndNarrow<C extends CH>(caseName: C): CasesCodec<D, BS, Omit<SS, C>, Exclude<CH, C>, Exclude<OH, C>> {
         return this.drop(caseName) as never;
     }
 
-    rebase<B2 extends object>(rebaseFn: (base: ObjectSchema<B>) => ObjectSchema<B2>): CasesCodec<D, B2, S, CH, OH> {
+    rebase<B2 extends object, BS2 extends ObjectSchema<B2>>(rebaseFn: (base: BS) => BS2): CasesCodec<D, BS2, SS, CH, OH> {
         return new CasesCodec(
             this.name,
             this.discriminator,
@@ -230,11 +231,11 @@ export class CasesCodec<
         )
     }
 
-    pick<C extends OH>(caseName: C): ObjectCodec<B & S[C] & { [_ in D]: C }> {
+    pick<C extends OH>(caseName: C): ObjectCodecFromSchema<BS & SS[C] & { [_ in D]: Codec<C> }> {
         return ObjectCodecImpl.create(this.name + "#" + caseName, {
             ...this.baseSchema,
             [this.discriminator]: Codecs.literals(caseName, [caseName]),
             ...this.casesSchema[caseName]
-        } as never);
+        } as never) as never;
     }
 }

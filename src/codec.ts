@@ -3,11 +3,7 @@ import {DecodingException, Result} from "./errors";
 
 export function identity<T>(x: T): T { return x; }
 
-declare const _optional: unique symbol;
-
-export type OptionalTypeMarker = typeof _optional;
-export type CodecType<T extends Codec<any>> =
-    T extends Codec<infer C> ? OptionalTypeMarker extends C ? Exclude<C, OptionalTypeMarker> | undefined : C : never;
+export type CodecType<T extends Codec<any>> = T extends Codec<infer C> ? C : never;
 
 /** @deprecated use CodecType */
 export type UnwrapCodec<T extends Codec<any>> = CodecType<T>;
@@ -73,25 +69,29 @@ export abstract class Codec<T> {
         return new CodecProjection(rename ?? this.name, this, decode, identity);
     }
 
-    get opt(): Codec<T | OptionalTypeMarker> {
-        return new OptionalCodec(this.name + " | nothing", this, undefined, null)
-            .imap<T | undefined>(x => x ?? undefined, x => x, undefined) as never;
+    get opt(): OptionalCodec<T> {
+        return new OptionalCodec(this.name + " | nothing", this);
     }
 
-    get optional(): Codec<T | OptionalTypeMarker> {
+    get optional(): OptionalCodec<T> {
         return this.opt;
     }
 
     get orUndefined(): Codec<T | undefined> {
-        return new OptionalCodec(this.name + " | undefined", this, undefined, undefined);
+        return new DefValuesCodec(this.name + " | undefined", this, undefined, undefined);
     }
 
     get orNull(): Codec<T | null> {
-        return new OptionalCodec(this.name + " | null", this, null, null);
+        return new DefValuesCodec(this.name + " | null", this, null, null);
+    }
+
+    /** @deprecated use orNull */
+    get nullable(): Codec<T | null> {
+        return this.orNull;
     }
 
     get orNullOrUndefined(): Codec<T | undefined | null> {
-        return new OptionalCodec(this.name + " | undefined | null", this, undefined, null);
+        return new DefValuesCodec(this.name + " | undefined | null", this, undefined, null);
     }
 
     static make<T>(name: string, decode: (v: unknown, ctx: DecodingContext) => T, encode: (v: T) => unknown, suppressContext: boolean = false): Codec<T> {
@@ -99,7 +99,7 @@ export abstract class Codec<T> {
     }
 }
 
-class OptionalCodec<T, O extends undefined | null> extends Codec<T | O> {
+class DefValuesCodec<T, O extends undefined | null> extends Codec<T | O> {
     constructor(
         readonly name: string,
         private readonly base: Codec<T>,
@@ -120,6 +120,30 @@ class OptionalCodec<T, O extends undefined | null> extends Codec<T | O> {
 
     $encode(value: T | O): unknown {
         if (value === this.o1 || value === this.o2) return value;
+
+        return this.base.$encode(value as T);
+    }
+}
+
+export class OptionalCodec<T> extends Codec<T | undefined> {
+    constructor(
+        readonly name: string,
+        private readonly base: Codec<T>
+    ) { super(); }
+
+    $decode(value: unknown, ctx: DecodingContext): T | undefined {
+        ctx.unsafeEnter(this.name, undefined);
+        try {
+            if (value === undefined || value === null) return undefined;
+
+            return this.base.$decode(value, ctx);
+        } finally {
+            ctx.unsafeLeave();
+        }
+    }
+
+    $encode(value: T | undefined): unknown {
+        if (value === undefined) return value;
 
         return this.base.$encode(value as T);
     }

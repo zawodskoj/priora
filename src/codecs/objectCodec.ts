@@ -1,16 +1,20 @@
-import { Codec, OptionalTypeMarker } from "../codec";
+import { Codec, OptionalCodec } from "../codec";
 import { DecodingContext } from "../context";
 
 export namespace ObjectCodecImpl {
-    export type ObjectSchema<T = any> = { [key in keyof T]: Codec<T[key]> }
+    export type ObjectSchema<T = any> = {
+        [key in keyof T]-?: undefined extends T[key] ? undefined extends Required<T>[key] ? Codec<T[key]> : OptionalCodec<Exclude<T[key], undefined>> : Codec<T[key]>
+    }
 
     export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
-    type OptKeys<T> = { [key in keyof T]: OptionalTypeMarker extends T[key] ? key : never }[keyof T];
-    type ReqKeys<T> = { [key in keyof T]: OptionalTypeMarker extends T[key] ? never : key }[keyof T];
-    type FixOptKeys<T> = { [key in keyof T]: OptionalTypeMarker extends T[key] ? Exclude<T[key], OptionalTypeMarker> : T };
-    export type ObjectResult<T> = Expand<Pick<T, ReqKeys<T>> & Partial<FixOptKeys<Pick<T, OptKeys<T>>>>>
+    type OptKeys<T> = { [key in keyof T]: T[key] extends OptionalCodec<infer _> ? key : never }[keyof T];
+    type ReqKeys<T> = { [key in keyof T]: T[key] extends OptionalCodec<infer _> ? never : key }[keyof T];
+    type FixValues<T> = { [key in keyof T]: T[key] extends Codec<infer CT> ? CT : never };
+    // dbg
+    // export type ObjectResult<S> = Expand<S>;
+    export type ObjectResult<S> = Expand<FixValues<Pick<S, ReqKeys<S>>> & Partial<FixValues<Pick<S, OptKeys<S>>>>>
 
-    class Impl<T extends object, P extends ObjectResult<T> | Partial<ObjectResult<T>>> extends Codec<P> {
+    class Impl<T extends object, S extends ObjectSchema<T>, P extends ObjectResult<S> | Partial<ObjectResult<S>>> extends Codec<P> {
         constructor(
             readonly name: string,
             readonly schema: ObjectSchema<T>,
@@ -59,7 +63,10 @@ export namespace ObjectCodecImpl {
         }
     }
 
-    export class ObjectCodec<T extends object> extends Impl<T, ObjectResult<T>> {
+    export type ObjectCodecFromSchema<S extends ObjectSchema> =
+        ObjectResult<S> extends infer R ? R extends object ? S extends ObjectSchema<R> ? ObjectCodec<R, S> : never : never : never;
+
+    export class ObjectCodec<T extends object, S extends ObjectSchema<T>> extends Impl<T, S, ObjectResult<S>> {
         constructor(
             name: string,
             schema: ObjectSchema<T>,
@@ -74,12 +81,12 @@ export namespace ObjectCodecImpl {
             );
         }
 
-        get partial(): PartialObjectCodec<T> {
+        get partial(): PartialObjectCodec<T, S> {
             return new PartialObjectCodec(this.name, this.schema, this.suppressContext);
         }
     }
 
-    export class PartialObjectCodec<T extends object> extends Impl<T, Partial<ObjectResult<T>>> {
+    export class PartialObjectCodec<T extends object, S extends ObjectSchema<T>> extends Impl<T, S, Partial<ObjectResult<S>>> {
         constructor(
             name: string,
             schema: ObjectSchema<T>,
@@ -95,7 +102,7 @@ export namespace ObjectCodecImpl {
         }
     }
 
-    export function create<T extends object>(typename: string, schema: ObjectSchema<T>, suppressContext: boolean = false): ObjectCodec<T> {
-        return new ObjectCodec<T>(typename, schema, suppressContext);
+    export function create<T extends object, S extends ObjectSchema<T>>(typename: string, schema: S, suppressContext: boolean = false): ObjectCodec<T, S> {
+        return new ObjectCodec<T, S>(typename, schema, suppressContext);
     }
 }

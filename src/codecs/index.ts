@@ -1,4 +1,4 @@
-import { Codec, identity } from "../codec";
+import { Codec, CodecType, identity } from "../codec";
 import { ObjectCodecImpl } from "./objectCodec";
 import { CasesCodec, PickCase as PickCase_ } from "./casesCodec";
 import { ArrayCodecImpl } from "./arrayCodec";
@@ -8,7 +8,6 @@ import { KeyCodec } from "../keyCodec";
 
 export namespace Codecs {
     import TupleCodecs = ArrayCodecImpl.TupleCodecs;
-    import RefillOpts = RecursiveCodecImpl.RefillOpts;
 
     interface PrimitiveHelperMap {
         number: number
@@ -78,12 +77,12 @@ export namespace Codecs {
         return schema;
     }
 
-    export type ObjectCodec<T extends object> = ObjectCodecImpl.ObjectCodec<T>;
-    export function object<T extends object>(typename: string, schema: ObjectSchema<T>): ObjectCodec<T> {
+    export type ObjectCodec<T extends object, S extends ObjectSchema<T>> = ObjectCodecImpl.ObjectCodec<T, S>;
+    export function object<T extends object, S extends ObjectSchema<T>>(typename: string, schema: S): ObjectCodec<T, S> {
         return ObjectCodecImpl.create(typename, schema);
     }
 
-    export function inline<T extends object>(schema: ObjectSchema<T>): ObjectCodec<T> {
+    export function inline<T extends object, S extends ObjectSchema<T>>(schema: S): ObjectCodec<T, S> {
         return ObjectCodecImpl.create("<inline type>", schema);
     }
 
@@ -101,10 +100,8 @@ export namespace Codecs {
     }
 
     export function recursive<T extends object>(typename: string) {
-        type RT = RefillOpts<T>;
-
-        return <C extends ObjectSchema<RT>>(mkCodec: (knot: RecursiveCodecImpl.RecurCodec<RT>) => C): RecursiveCodecImpl.RecurCodec<RT> => {
-            return RecursiveCodecImpl.create<RT, C>(typename, mkCodec);
+        return <C extends ObjectSchema<T>>(mkCodec: (knot: RecursiveCodecImpl.RecurCodec<T, C>) => C): RecursiveCodecImpl.RecurCodec<T, C> => {
+            return RecursiveCodecImpl.create<T, C>(typename, mkCodec);
         }
     }
 
