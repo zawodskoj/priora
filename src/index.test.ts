@@ -80,6 +80,32 @@ test("recursives and optionals", () => {
     }));
 })
 
+test("orElse", () => {
+    const codec = C.object("test", {
+        foo: C.string,
+        bar: C.string.orElse("test 1"),
+        baz: C.string.orElseLazy(() => "test 2")
+    });
+
+    expect(codec.decodeStrict({
+        foo: "123"
+    })).toStrictEqual({ foo: "123", bar: "test 1", baz: "test 2" })
+})
+
+test("encode/decode in field-checking mode", () => {
+    const codec1 = C.inline({ foo: C.string })
+    const codec2 = C.inline({ foo: C.string.opt })
+
+    expect(() => codec1.decodeStrict({ })).toThrow("Missing property foo");
+    expect(codec2.decodeStrict({ })).toStrictEqual({ foo: undefined });
+
+    expect(() => codec1.encode({ } as { foo: string })).toThrow("Missing property foo");
+    expect(() => codec1.encode({ foo: undefined! })).toThrow("Failed to encode string - type mismatch");
+    expect(codec1.encode({ foo: "foo" })).toStrictEqual({ foo: "foo" });
+    expect(codec2.encode({ foo: undefined! })).toStrictEqual({ foo: undefined });
+    expect(codec2.encode({ foo: "foo" })).toStrictEqual({ foo: "foo" });
+})
+
 /*
 
 test("kek", () => {

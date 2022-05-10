@@ -31,6 +31,7 @@ export interface ErrorHandlingOptions {
     encodeTracing: TracingMode
     decodeTracing: TracingMode
     reportUnknownProperties: ReportUnknownProperties
+    strictPrimitives: boolean
 
     UNSAFE_leaveInvalidValuesAsIs: boolean
 }
@@ -40,7 +41,8 @@ export abstract class Codec<T> {
         UNSAFE_leaveInvalidValuesAsIs: false,
         encodeTracing: TracingMode.FULL_TRACING,
         decodeTracing: TracingMode.FULL_TRACING,
-        reportUnknownProperties: ReportUnknownProperties.ALWAYS
+        reportUnknownProperties: ReportUnknownProperties.ALWAYS,
+        strictPrimitives: true
     }
 
     static loggingConfiguration: LoggingConfiguration = {
@@ -50,6 +52,8 @@ export abstract class Codec<T> {
     };
 
     abstract name: string
+
+    get acceptsMissingFields(): boolean { return false; }
 
     abstract $decode(value: unknown, ctx: DecodingContext): T
     abstract $encode(value: T, ctx: EncodingContext): unknown
@@ -190,6 +194,8 @@ class OrElseCodec<T> extends Codec<T> {
         private readonly isDefault: ((val: unknown) => boolean) = OrElseCodec.defaultIsDefault
     ) { super(); }
 
+    get acceptsMissingFields(): boolean { return true; }
+
     $decode(value: unknown, ctx: DecodingContext): T {
         ctx.unsafeEnter(this.name, undefined);
         try {
@@ -211,6 +217,8 @@ export class OptionalCodec<T> extends Codec<T | undefined> {
         readonly name: string,
         private readonly base: Codec<T>
     ) { super(); }
+
+    get acceptsMissingFields(): boolean { return true; }
 
     $decode(value: unknown, ctx: DecodingContext): T | undefined {
         ctx.unsafeEnter(this.name, undefined);

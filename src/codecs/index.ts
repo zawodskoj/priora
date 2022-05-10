@@ -22,7 +22,14 @@ export namespace Codecs {
                 if (typeof val === typ) return val as PrimitiveHelperMap[T];
                 else return ctx.failure(`Failed to decode ${typ} - type mismatch`, val);
             },
-            identity
+            (val, ctx) => {
+                if (ctx.errorHandlingOptions.strictPrimitives) {
+                    if (typeof val === typ) return val as PrimitiveHelperMap[T];
+                    else return ctx.failure(`Failed to encode ${typ} - type mismatch`, val);
+                }
+
+                return val;
+            }
         )
     }
 
@@ -33,7 +40,14 @@ export namespace Codecs {
                 if (val === singleton) return singleton;
                 else return ctx.failure("Failed to decode singleton - value mismatch", val);
             },
-            identity
+            (val, ctx) => {
+                if (ctx.errorHandlingOptions.strictPrimitives) {
+                    if (val === singleton) return singleton;
+                    else return ctx.failure(`Failed to encode singleton - value mismatch`, val);
+                }
+
+                return val;
+            }
         )
     }
 

@@ -65,9 +65,15 @@ export namespace ObjectCodecImpl {
                 }
 
                 if (!this.isPartial) {
-                    for (const [propertyName] of this.properties) {
+                    for (const [propertyName, propertyCodec] of this.properties) {
                         if (propertyName in target)
                             continue;
+
+                        // should pick up `undefined`
+                        if (propertyCodec.acceptsMissingFields) {
+                            decodeSingleField(propertyName, propertyCodec as unknown as Codec<T[keyof T]>);
+                            continue;
+                        }
 
                         return ctx.failure(`Missing property ${propertyName}`, coercedVal);
                     }
@@ -103,7 +109,7 @@ export namespace ObjectCodecImpl {
                         }
                     };
 
-            if (ctx.errorHandlingOptions.reportUnknownProperties & ReportUnknownProperties.ON_DECODE) {
+            if (ctx.errorHandlingOptions.reportUnknownProperties & ReportUnknownProperties.ON_ENCODE) {
                 for (const propertyName in val) {
                     const propertyCodec = this.schema[propertyName as never];
 
@@ -116,9 +122,17 @@ export namespace ObjectCodecImpl {
                 }
 
                 if (!this.isPartial) {
-                    for (const [propertyName] of this.properties) {
+                    for (const [propertyName, propertyCodec] of this.properties) {
+                        console.log("Checking " + propertyName);
+
                         if (propertyName in target)
                             continue;
+
+                        // should pick up `undefined`
+                        if (propertyCodec.acceptsMissingFields) {
+                            encodeSingleField(propertyName, propertyCodec);
+                            continue;
+                        }
 
                         return ctx.failure(`Missing property ${propertyName}`, val);
                     }
