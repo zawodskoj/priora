@@ -84,6 +84,7 @@ export abstract class Codec<T> {
         }
     };
 
+    /** @deprecated highly unsafe mode - do not use without specific reason */
     decodeLax = (value: unknown): T => this.decodeInFreshContext(value, {
         ...Codec.defaultErrorHandlingOptions,
         UNSAFE_leaveInvalidValuesAsIs: true
