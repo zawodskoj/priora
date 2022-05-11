@@ -4,62 +4,28 @@ import { KeyCodec } from "../keyCodec";
 import { surround } from "../contextual.stub";
 
 export namespace RecordCodecImpl {
-    export function create<T, L extends string>(codec: Codec<T>, keyCodec: KeyCodec<L> | undefined): Codec<Record<L, T>> {
-        const typename = `record<${ keyCodec?.name ?? "string" }, ${ codec.name }>`;
+    function createUniversal<T, L, B>(
+        kind: string,
+        codec: Codec<T>,
+        keyCodec: KeyCodec<L> | undefined,
+        mkNew: () => B,
+        set: (target: B, key: L, value: T) => void,
+        ents: (u: B) => IterableIterator<[L, T]> | [L, T][]
+    ): Codec<any> {
+        const typename = `${kind}<${ keyCodec?.name ?? "string" }, ${ codec.name }>`;
 
-        function decode(val: unknown, ctx: DecodingContext): Record<L, T> {
+        function decode(val: unknown, ctx: DecodingContext): any {
             if (typeof val !== "object" || val === null)
                 return ctx.failure("Failed to decode object - object expected", val);
 
-            const target = {} as Record<L, T>;
-
-            surround(ctx, (enter) => {
-                for (const [k, v] of Object.entries(val as object)) {
-                    enter(typename + "." + k, k, () => {
-                        const decodedKey = keyCodec?.decode(k, ctx) ?? (k as L);
-
-                        target[decodedKey] = codec.$decode(v, ctx);
-                    })
-                }
-            })
-
-            return target;
-        }
-
-        function encode(val: Record<L, T>, ctx: EncodingContext): unknown {
-            const target = {} as Record<string, unknown>;
-
-            surround(ctx, (enter) => {
-                for (const [k, v] of Object.entries(val)) {
-                    enter(typename + "." + k, k, () => {
-                        const encodedKey = keyCodec?.encode(k as L) ?? k;
-
-                        target[encodedKey] = codec.$encode(v as T, ctx);
-                    })
-                }
-            })
-
-            return target;
-        }
-
-        return Codec.make(typename, decode, encode);
-    }
-
-    export function createMap<T, L>(codec: Codec<T>, keyCodec: KeyCodec<L> | undefined): Codec<Map<L, T>> {
-        const typename = `record<${ keyCodec?.name ?? "string" }, ${ codec.name }>`;
-
-        function decode(val: unknown, ctx: DecodingContext): Map<L, T> {
-            if (typeof val !== "object" || val === null)
-                return ctx.failure("Failed to decode object - object expected", val);
-
-            const target = new Map<L, T>();
+            const target = mkNew();
 
             surround(ctx, (enter) => {
                 for (const [k, v] of Object.entries(val as object)) {
                     enter(typename + "." + k, k, () => {
                         const decodedKey = keyCodec?.decode(k, ctx) ?? (k as unknown as L);
 
-                        target.set(decodedKey, codec.$decode(v, ctx));
+                        set(target, decodedKey, codec.$decode(v, ctx));
                     })
                 }
             })
@@ -67,11 +33,11 @@ export namespace RecordCodecImpl {
             return target;
         }
 
-        function encode(val: Map<L, T>, ctx: EncodingContext): unknown {
+        function encode(val: any, ctx: EncodingContext): unknown {
             const target = {} as Record<string, unknown>;
 
             surround(ctx, (enter) => {
-                for (const [k, v] of val.entries()) {
+                for (const [k, v] of ents(val)) {
                     // NOTE - no way to enter context before decoding key
                     // (at least keyCodec does not have contexts and should not throw on encoding)
                     const encodedKey = keyCodec?.encode(k as L) ?? (k as unknown as string);
@@ -86,5 +52,27 @@ export namespace RecordCodecImpl {
         }
 
         return Codec.make(typename, decode, encode);
+    }
+
+    export function create<T, L extends string>(codec: Codec<T>, keyCodec: KeyCodec<L> | undefined): Codec<Record<L, T>> {
+        return createUniversal(
+            "record",
+            codec,
+            keyCodec,
+            () => ({} as Record<L, T>),
+            (t, k, v) => { t[k] = v },
+            u => Object.entries(u) as [L, T][]
+        )
+    }
+
+    export function createMap<T, L>(codec: Codec<T>, keyCodec: KeyCodec<L> | undefined): Codec<Map<L, T>> {
+        return createUniversal(
+            "map",
+            codec,
+            keyCodec,
+            () => new Map<L, T>(),
+            (t, k, v) => { t.set(k, v) },
+            u => u.entries()
+        );
     }
 }
