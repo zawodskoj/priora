@@ -3,62 +3,24 @@ import { DecodingContext, EncodingContext } from "../context";
 import { surround } from "../contextual.stub";
 
 export namespace ArrayCodecImpl {
-    export function create<T>(typename: string, codec: Codec<T>): Codec<T[]> {
-        function decode(val: unknown, ctx: DecodingContext): T[] {
+    function createUniversal(typename: string, kind: string, length: number, codecAtIndex: (i: number) => Codec<any>): Codec<any> {
+        function decode(val: unknown, ctx: DecodingContext): any {
             if (!Array.isArray(val))
-                return ctx.failure("Failed to decode array - array expected", val);
+                return ctx.failure("Failed to decode " + kind + " - array expected", val);
+
+            if (!!length && (val.length !== length))
+                return ctx.failure("Failed to decode " + kind + " - wrong element count", val);
+
+            const realLength = length || val.length;
 
             const coercedArray = val as unknown[];
-            const target = [] as T[];
+            const target: unknown[] = [];
 
             surround(ctx, (enter) => {
-                for (let i = 0; i < coercedArray.length; i++) {
-                    enter(`${typename}[${i}]`, i, () => {
-                        target.push(codec.$decode(coercedArray[i], ctx));
-                    });
-                }
-            })
-
-            return target;
-        }
-
-        function encode(val: T[], ctx: EncodingContext): unknown {
-            const target = [] as unknown[];
-
-            surround(ctx, (enter) => {
-                for (let i = 0; i < val.length; i++){
-                    enter(`${typename}[${i}]`, i, () => {
-                        target.push(codec.$encode(val[i], ctx));
-                    });
-                }
-            })
-
-            return target;
-        }
-
-        return Codec.make(typename, decode, encode);
-    }
-
-    export type TupleCodecs<T extends [any, ...any[]]> = {
-        [key in keyof T]: Codec<T[key]>
-    }
-
-    export function createTuple<T extends [any, ...any[]]>(typename: string, codecs: TupleCodecs<T>): Codec<T> {
-        function decode(val: unknown, ctx: DecodingContext): T {
-            if (!Array.isArray(val))
-                return ctx.failure("Failed to decode tuple - array expected", val);
-
-            if (val.length !== codecs.length)
-                return ctx.failure("Failed to decode tuple - wrong element count", val);
-
-            const coercedArray = val as unknown[];
-            const target = [] as unknown as T;
-
-            surround(ctx, (enter) => {
-                for (let i = 0; i < codecs.length; i++){
+                for (let i = 0; i < realLength; i++){
                     enter(`${typename}[${i}]`, i, () => {
                         const elem = coercedArray[i];
-                        const codec = codecs[i];
+                        const codec = codecAtIndex(i);
 
                         try {
                             target.push(codec.$decode(elem, ctx));
@@ -72,14 +34,17 @@ export namespace ArrayCodecImpl {
             return target;
         }
 
-        function encode(val: T, ctx: EncodingContext): unknown {
+        function encode(val: any, ctx: EncodingContext): unknown {
+            // TODO: strict length checks
             const target = [] as unknown[];
 
+            const realLength = length || val.length;
+
             surround(ctx, (enter) => {
-                for (let i = 0; i < codecs.length; i++){
+                for (let i = 0; i < realLength; i++){
                     enter(`${typename}[${i}]`, i, () => {
                         const elem = val[i];
-                        const codec = codecs[i];
+                        const codec = codecAtIndex(i);
 
                         try {
                             target.push(codec.$encode(elem, ctx));
@@ -94,5 +59,17 @@ export namespace ArrayCodecImpl {
         }
 
         return Codec.make(typename, decode, encode);
+    }
+
+    export function create<T>(typename: string, codec: Codec<T>): Codec<T[]> {
+        return createUniversal(typename, "array", 0, () => codec);
+    }
+
+    export type TupleCodecs<T extends [any, ...any[]]> = {
+        [key in keyof T]: Codec<T[key]>
+    }
+
+    export function createTuple<T extends [any, ...any[]]>(typename: string, codecs: TupleCodecs<T>): Codec<T> {
+        return createUniversal(typename, "tuple", codecs.length, i => codecs[i]);
     }
 }
