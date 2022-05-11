@@ -123,8 +123,6 @@ export namespace ObjectCodecImpl {
 
                 if (!this.isPartial) {
                     for (const [propertyName, propertyCodec] of this.properties) {
-                        console.log("Checking " + propertyName);
-
                         if (propertyName in target)
                             continue;
 
