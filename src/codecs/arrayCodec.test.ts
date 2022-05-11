@@ -1,4 +1,5 @@
 import { Codecs } from "./index";
+import { CodecType } from "../codec";
 
 // todo optionals?
 
@@ -22,6 +23,15 @@ describe("Array codec tests", () => {
 describe("Tuple codec tests", () => {
     const tuple1 = Codecs.tuple([Codecs.number]);
     const tuple2 = Codecs.tuple([Codecs.number, Codecs.string]);
+    const tuple7 = Codecs.tuple([Codecs.number, Codecs.string, Codecs.number, Codecs.string, Codecs.number, Codecs.string, Codecs.number]);
+
+    test("Infers into correct codec type", () => {
+        type Compare<A, B> = A extends B ? B extends A ? true : false : false;
+
+        const isTuple1Ok: Compare<[number], CodecType<typeof tuple1>> = true;
+        const isTuple2Ok: Compare<[number, string], CodecType<typeof tuple2>> = true;
+        const isTuple7Ok: Compare<[number, string, number, string, number, string, number], CodecType<typeof tuple7>> = true;
+    })
 
     test("Does not decode invalid values", () => {
         expect(() => tuple1.decodeStrict(123)).toThrow("Failed to decode tuple - array expected");
