@@ -3,4 +3,3 @@ export * from "./keyCodec";
 export * from "./codecs";
 export * from "./context";
 export * from "./errors";
-export * from "./contextualSample";
