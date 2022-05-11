@@ -1,4 +1,4 @@
-import { Codec, CodecType } from "../codec";
+import { Codec } from "../codec";
 import { ObjectCodecImpl } from "./objectCodec";
 import { DecodingContext, EncodingContext } from "../context";
 import { Codecs } from "./index";
@@ -6,7 +6,6 @@ import ObjectSchema = ObjectCodecImpl.ObjectSchema;
 import ObjectCodec = ObjectCodecImpl.ObjectCodec;
 import ObjectResult = ObjectCodecImpl.ObjectResult;
 import ObjectCodecFromSchema = ObjectCodecImpl.ObjectCodecFromSchema;
-import { surround } from "../contextual.stub";
 import Expand = ObjectCodecImpl.Expand;
 
 export type CasesCodecResult<
@@ -45,7 +44,7 @@ export class ClosedCasesCodec<
     SS extends Record<H, ObjectSchema>,
     H extends string
 > extends Codec<CasesCodecResult<D, BS, SS, H>> {
-    private casesMap: Record<string, [string, Codec<unknown>][]>
+    private caseCodecs: Record<string, ObjectCodec<any, any>>;
 
     constructor (
         readonly name: string,
@@ -55,13 +54,17 @@ export class ClosedCasesCodec<
     ) {
         super();
 
-        const casesMap: Record<string, [string, Codec<unknown>][]> = {};
+        const caseCodecs: Record<string, ObjectCodec<any, any>> = {};
 
-        for (const [name, schema] of Object.entries(casesSchema)) {
-            casesMap[name] = Object.entries({ ...baseSchema, ...(schema as object) }) as [string, Codec<unknown>][];
+        for (const [caseName, schema] of Object.entries(casesSchema)) {
+            caseCodecs[caseName] = new ObjectCodec(
+                name + "#" + caseName,
+                { ...baseSchema, ...(schema as object) },
+                false
+            );
         }
 
-        this.casesMap = casesMap;
+        this.caseCodecs = caseCodecs;
     }
 
     open(): CasesCodec<D, BS, SS, H, H> {
@@ -89,50 +92,29 @@ export class ClosedCasesCodec<
             return ctx.failure("Failed to decode cases - discriminator is not a string", val);
         }
 
-        const caseProperties = this.casesMap[discriminator];
-        if (!caseProperties) {
+        const caseCodec = this.caseCodecs[discriminator];
+        if (!caseCodec) {
             return ctx.failure("Failed to decode cases - none matched", val);
         }
 
-        const target = {
-            [this.discriminator]: discriminator
-        };
+        const result = caseCodec.$decode(val, ctx)
+        result[this.discriminator] = discriminator;
 
-        surround(ctx, (enter) => {
-            enter(this.name + "#" + discriminator, () => {
-                for (const [propertyName, propertyCodec] of caseProperties) {
-                    enter(this.name + "#" + discriminator + "." + propertyName, propertyName, () => {
-                        target[propertyName] = propertyCodec.$decode(coercedVal[propertyName], ctx) as never;
-                    });
-                }
-            })
-        });
-
-        return target as never;
+        return result as never;
     }
 
     $encode(val: CasesCodecResult<D, BS, SS, H>, ctx: EncodingContext): unknown {
         const discriminator = val[this.discriminator as never];
 
-        const caseProperties = this.casesMap[discriminator];
-        if (!caseProperties)
-            return ctx.failure(`Invalid discriminator value ${discriminator}`, val);
+        const caseCodec = this.caseCodecs[discriminator];
+        if (!caseCodec) {
+            return ctx.failure("Failed to decode cases - none matched", val);
+        }
 
-        const target = {
-            [this.discriminator]: discriminator
-        } as Record<string, unknown>;
+        const result = caseCodec.$encode(val, ctx);
+        (result as Record<string, unknown>)[this.discriminator] = discriminator;
 
-        surround(ctx, (enter) => {
-            enter(this.name + "#" + discriminator, () => {
-                for (const [propertyName, propertyCodec] of caseProperties) {
-                    enter(this.name + "#" + discriminator + "." + propertyName, propertyName, () => {
-                        target[propertyName] = propertyCodec.$encode(val[propertyName as never], ctx);
-                    });
-                }
-            })
-        });
-
-        return target;
+        return result;
     }
 
     pick<C extends H>(caseName: C): ObjectCodecFromSchema<BS & SS[C] & { [_ in D]: Codec<C> }> {
