@@ -109,6 +109,12 @@ new Suite()
             bar: 123
         })
     })
+    .add("JSON roundtrip for big object", () => {
+        JSON.parse(JSON.stringify(createBigObject()))
+    })
+    .add("JSON roundtrip for big object (const)", () => {
+        JSON.parse(JSON.stringify(constBigObject))
+    })
     .add("Big object", () => {
         bigObject.decodeStrict(createBigObject());
     })
