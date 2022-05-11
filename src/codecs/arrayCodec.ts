@@ -1,17 +1,17 @@
-import { Codec } from "../codec";
+import { Codec, OptionalCodec } from "../codec";
 import { DecodingContext, EncodingContext } from "../context";
 import { surround } from "../contextual.stub";
 
 export namespace ArrayCodecImpl {
-    function createUniversal(typename: string, kind: string, length: number, codecAtIndex: (i: number) => Codec<any>): Codec<any> {
+    function createUniversal(typename: string, kind: string, minLength: number, maxLength: number, codecAtIndex: (i: number) => Codec<any>): Codec<any> {
         function decode(val: unknown, ctx: DecodingContext): any {
             if (!Array.isArray(val))
                 return ctx.failure("Failed to decode " + kind + " - array expected", val);
 
-            if (!!length && (val.length !== length))
+            if (!!maxLength && (val.length < minLength || val.length > maxLength))
                 return ctx.failure("Failed to decode " + kind + " - wrong element count", val);
 
-            const realLength = length || val.length;
+            const realLength = maxLength || val.length;
 
             const coercedArray = val as unknown[];
             const target: unknown[] = [];
@@ -38,7 +38,7 @@ export namespace ArrayCodecImpl {
             // TODO: strict length checks
             const target = [] as unknown[];
 
-            const realLength = length || val.length;
+            const realLength = maxLength || val.length;
 
             surround(ctx, (enter) => {
                 for (let i = 0; i < realLength; i++){
@@ -62,14 +62,30 @@ export namespace ArrayCodecImpl {
     }
 
     export function create<T>(typename: string, codec: Codec<T>): Codec<T[]> {
-        return createUniversal(typename, "array", 0, () => codec);
+        return createUniversal(typename, "array", 0, 0, () => codec);
     }
 
     export type TupleCodecs<T extends [any, ...any[]]> = {
         [key in keyof T]: Codec<T[key]>
     }
+    export type TupleResult<S> =
+        S extends [infer Head, ...infer Rest]
+            ? Head extends OptionalCodec<infer HeadT>
+                ? [HeadT?, ...TupleResult<Rest>]
+                : [Head extends Codec<infer HeadT> ? HeadT : never, ...TupleResult<Rest>]
+            : [];
 
-    export function createTuple<T extends [any, ...any[]]>(typename: string, codecs: TupleCodecs<T>): Codec<T> {
-        return createUniversal(typename, "tuple", codecs.length, i => codecs[i]);
+    export function createTuple<T extends [any, ...any[]], S extends TupleCodecs<T>>(typename: string, codecs: S): Codec<TupleResult<S>> {
+        let minLength = codecs.length;
+
+        for (let i = codecs.length - 1; i >= 0; i--) {
+            if (codecs[i] instanceof OptionalCodec) {
+                minLength--;
+            } else {
+                break;
+            }
+        }
+
+        return createUniversal(typename, "tuple", minLength, codecs.length, i => codecs[i]);
     }
 }

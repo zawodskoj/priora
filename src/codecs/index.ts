@@ -8,6 +8,7 @@ import { KeyCodec } from "../keyCodec";
 
 export namespace Codecs {
     import TupleCodecs = ArrayCodecImpl.TupleCodecs;
+    import TupleResult = ArrayCodecImpl.TupleResult;
 
     interface PrimitiveHelperMap {
         number: number
@@ -111,8 +112,8 @@ export namespace Codecs {
         return ArrayCodecImpl.create<T>(codec.name + "[]", codec);
     }
 
-    export function tuple<T extends [any, ...any[]]>(codecs: TupleCodecs<T>): Codec<T> {
-        return ArrayCodecImpl.createTuple<T>(`[${codecs.map(x => x.name).join(", ")}]`, codecs);
+    export function tuple<T extends [any, ...any[]], S extends TupleCodecs<T>>(codecs: S): Codec<TupleResult<S>> {
+        return ArrayCodecImpl.createTuple<T, S>(`[${codecs.map(x => x.name).join(", ")}]`, codecs);
     }
 
     export function recursive<T extends object>(typename: string) {
