@@ -69,12 +69,16 @@ export class TranscodingContext {
 }
 
 export class DecodingContext extends TranscodingContext {
+    readonly mode = "DECODING" as const
+
     constructor(errorHandlingOptions: ErrorHandlingOptions) {
         super(errorHandlingOptions, errorHandlingOptions.decodeTracing);
     }
 }
 
 export class EncodingContext extends TranscodingContext {
+    readonly mode = "ENCODING" as const
+
     constructor(errorHandlingOptions: ErrorHandlingOptions) {
         super(errorHandlingOptions, errorHandlingOptions.encodeTracing);
     }
