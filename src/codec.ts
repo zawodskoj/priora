@@ -73,6 +73,16 @@ export abstract class Codec<T> {
         });
     };
 
+    /** @deprecated */
+    _decodeStrictWithoutTracing: (value: unknown) => T = value => {
+        return this.decodeInFreshContext(value, {
+            ...Codec.defaultErrorHandlingOptions,
+            encodeTracing: TracingMode.NO_TRACING,
+            decodeTracing: TracingMode.NO_TRACING,
+            UNSAFE_leaveInvalidValuesAsIs: false
+        });
+    };
+
     tryDecodeStrict = (value: unknown): Result<T> => {
         try {
             return { T: "ok", value: this.decodeInFreshContext(value, {
