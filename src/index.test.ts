@@ -1,6 +1,5 @@
 import { Codecs as C } from "./codecs";
 import { Codec, CodecType } from "./codec";
-import { RecursiveCodecImpl } from "./codecs/recursiveCodec";
 
 export {};
 
@@ -105,47 +104,3 @@ test("encode/decode in field-checking mode", () => {
     expect(codec2.encode({ foo: undefined! })).toStrictEqual({ foo: undefined });
     expect(codec2.encode({ foo: "foo" })).toStrictEqual({ foo: "foo" });
 })
-
-/*
-
-test("kek", () => {
-    const cases = C.cases("cases", "type", {
-        foo: { foo: C.string },
-        bar: { bar: C.number },
-        qux: { qux: C.boolean },
-    })
-
-    type Cases = CodecType<typeof cases>;
-    type CasesK = "foo" | "bar" | "qux";
-    type CasesOG<T extends CasesK = CasesK> = Cases & { type: T };
-    type CasesG<T extends CasesK = CasesK> = PickCase<typeof cases, T>;
-
-    function a(c: Cases) {
-        if (c.type === "bar") {
-            void c.bar
-        }
-    }
-
-    function b(c: CasesOG) {
-        if (c.type === "bar") {
-            void c.bar
-        }
-    }
-
-    function c(c: CasesG) {
-        if (c.type === "bar") {
-            void c.bar
-        }
-    }
-
-    function d<T extends "bar">(t: T, c: CasesG): CasesG<T> {
-        if (c.type === "bar") {
-            if (t === "bar") {
-                return c;
-            }
-        }
-    }
-
-    d<never>("" as never, null as unknown as CasesG);
-})
-*/
