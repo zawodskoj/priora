@@ -143,9 +143,10 @@ export abstract class Codec<T> {
         name: string,
         decode: (v: unknown, ctx: DecodingContext) => T,
         encode: (v: T, ctx: EncodingContext) => unknown,
-        suppressContext: boolean = false
+        suppressContext: boolean = false,
+        acceptsMissingFields: boolean = false
     ): Codec<T> {
-        return new LambdaCodec<T>(name, decode, encode, suppressContext);
+        return new LambdaCodec<T>(name, decode, encode, suppressContext, acceptsMissingFields);
     }
 }
 
@@ -243,8 +244,11 @@ class LambdaCodec<T> extends Codec<T> {
         readonly name: string,
         private readonly _decode: (v: unknown, ctx: DecodingContext) => T,
         private readonly _encode: (v: T, ctx: EncodingContext) => unknown,
-        private readonly suppressContext: boolean
+        private readonly suppressContext: boolean,
+        private readonly _acceptsMissingFields: boolean
     ) { super(); }
+
+    get acceptsMissingFields(): boolean { return this._acceptsMissingFields; }
 
     $decode(value: unknown, ctx: DecodingContext): T {
         if (!ctx.isTracingEnabled || this.suppressContext) {

@@ -55,6 +55,8 @@ export namespace Codecs {
     export const string = primitive("string");
     export const boolean = primitive("boolean");
 
+    export const unknown = Codec.make("unknown", v => v, v => v, true, true);
+
     export function literals<L extends string, Ts extends [L, ...L[]]>(name: string, ts: Ts): Codec<Ts[number]> {
         return Codec.make<Ts[number]>(
             name,
