@@ -1,5 +1,7 @@
 import { Codecs } from "./index";
 
+// todo optionals?
+
 describe("Array codec tests", () => {
     const numbers = Codecs.array(Codecs.number);
 
